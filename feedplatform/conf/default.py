@@ -7,9 +7,6 @@ this. Dict values are usually merged.
 # No addins are loaded.
 ADDINS = []
 
-# No models are overridden.
-MODELS = {}
-
 # Allow only specific protocols; set to False to skip the check, in
 # which case anything given as the feed url will be passed through to
 # the parser library. That will potentiallly allow the filesystem, as
