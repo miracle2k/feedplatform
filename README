@@ -1,0 +1,182 @@
+FeedPlatform
+============
+
+FeedPlatform implements the core functionality of a feed aggregator. It is
+supposed to be lightweight, reusable and extremely flexible, mainly intended
+for integration with other applications.
+
+It consists of:
+
+    - A database, holding feeds (as defined by the user) and items (as
+      managed by the library, gathered by parsing the feeds).
+
+    - A daemonizable script to regularily check the feeds for changes, and
+      update the database accordingly.
+
+Not provided are facilities to actually access the database from the
+outside - you are expected to have your own interface to the data (e.g. an
+ORM in your application).
+
+In it's simpliest form (the default state, if used without configuration),
+the **feed** database table will merely consist of one column storing the
+URL (besides the primary id column), and the **item** table's only field
+stores the guid that makes it identifiable.
+
+Using the hook and addin infrastructure, you are able to build upon this a
+full-blown feed aggregator that stores metadata, handles feed images, claim
+codes, enclosures and parses feeds in a prioritized, distributed manner -
+often with just a few lines in a configuration file.
+
+Adding FeedPlatform to your application usually works like this:
+
+    1. Define tables in your application to hold the aggregator data (feeds,
+       items, etc). If those already exist, good for you - FeedPlatform will
+       be happy to adapt to your schema.
+    2. Make FeedPlatform understand the schema you are using via a config
+       file.
+
+If that sounds to compliated, you can consider skipping step 1 and using
+the default database schema. In that case, step 2 will consist of making
+your own application aware of that default schema.
+
+
+Installation
+------------
+
+Simply add FeedPlatform to your path, and make sure the following
+dependencies are available:
+
+    * Storm ORM (https://storm.canonical.com/)
+    * Universal Feed Parser (http://www.feedparser.org/)
+    * Pyro (http://pyro.sourceforge.net/)
+
+To use the Django integration, obviously the Django framework is
+required:
+
+    http://www.djangoproject.com/
+
+To run the tests, you will need the py.test library:
+
+    http://codespeak.net/py/dist/test.html
+
+
+Tutorial
+--------
+
+At the core of your interaction with the FeedPlatform, development-wise,
+is the configuration file. You define which configuration file to use via
+the ``FEEDPLATFORM_CONFIG`` environment variable, before you load and use
+the library - very similar to how the Django settings mechanism works.
+
+If you want to use FeedPlatform multiple times on the same server, e.g.
+with different databases, projects etc., simply make sure the correct
+config file is set each time - in the simpliest case by manipulating
+``os.environ``.
+
+FeedPlatform absolutely requires a configuration to run, since it depends
+on a database. However, it will not enforce that restriction unless
+actually necessary, so you will be able to do certain things without one.
+
+For starters, let's see what database schema we operate with per default,
+unmodified by a config file::
+
+    $ feedplatform models
+    model Feeds:
+        id     primary key
+        url    unicode
+
+    # TODO: add actual output here
+
+.. note:: The distutils setup will have placed the ``feedplatform``
+   command line tool on your path; if that is not the case, you can find
+   it inside the ``feedplatform.bin`` namespace.
+
+Obviously, this is not yet very useful; at the very least, we want to
+store some data, like the title and description of each feed, and the same
+for each item.
+
+So, let's create a config file. You can be put anywhere you like, as long
+as you point the ``FEEDPLATFORM_CONFIG`` environment variable to the
+right place:
+
+    FEEDPLATFORM_CONFIG = '/var/www/maypp/aggregator/config.py'
+
+If you have *myapp* on your path, you can also say:
+
+    FEEDPLATFORM_CONFIG_MODULE = 'maypp.aggregator.config'
+
+Create this file, and put this in there:
+
+{{{
+MODELS = {
+    'feed':[collect_data()],
+    'item': [collect_item_data()],
+}
+}}}
+# TODO: Replace with correct addin names and syntax
+
+.. note:: In the future, you may use ``feedplatform new-config`` to
+generate a new configuration file based on a easier to use template.
+
+This will collect a default set of data, but you could specify this
+further, e.g.
+
+    collect_data("title", "description"])
+    # TODO: Replace with correct addin names and syntax
+
+Now let's see how our models have changed:
+
+    $ set FEEDPLATFORM_CONFIG = '~/myconfig.py'
+    $ feedplatform models
+    # TODO: add actual output here
+
+As you can see, both tables have a bunch of new fields.
+
+# TODO: Give another example using the enclosures addin
+
+# TODO: Explain running the daemon
+
+
+Available addins
+----------------
+
+TODO
+
+
+Your own addins
+~~~~~~~~~~~~~~~
+
+TODO: some basic info, list all the hooks, point to the code of existing
+addins.
+
+
+    class store_enclosures(addins.base):
+        def __init(force=False):
+            from feedplatform import models
+            models.AVAILABLE['enclosure'] = base_enclosure_fields
+
+        def get_columns(self):
+            pass
+
+        def on_some_hook():
+            # will automatically be registered as a callback
+            pass
+
+        def configured(self):
+            from feedplatform import db
+            # e.g. monkey patch custom next method into FeedStore.
+
+
+TODO:
+-----
+    - add one or more example projects
+    - add django integration:
+        * a management command
+        * feedplatform config referenced in django settings file
+        * possibly automatic model creation:
+            AbstractFeed, AbstractItem, AbstractEnclosure = feedplatform.django.generate_models()
+
+            class Feed(AbstractFeed):
+                pass
+    - explain and provide better tools to use custom model classes
+    - automatic schema creation (generate create table statements)
