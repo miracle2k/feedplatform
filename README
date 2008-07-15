@@ -80,12 +80,13 @@ actually necessary, so you will be able to do certain things without one.
 For starters, let's see what database schema we operate with per default,
 unmodified by a config file::
 
-    $ feedplatform models
-    model Feeds:
-        id     primary key
-        url    unicode
-
-    # TODO: add actual output here
+    $ feedplatform.py models
+    Feed
+        id: Int
+        url: Unicode
+    Item
+        feed_id: Int
+        guid: Unicode
 
 .. note:: The distutils setup will have placed the ``feedplatform``
    command line tool on your path; if that is not the case, you can find
