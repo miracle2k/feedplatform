@@ -9,3 +9,5 @@
 
 - success load filesystem (rel, abs) -> check setting available
 - success load module                -> check setting available
+
+- test that dicts are merged
