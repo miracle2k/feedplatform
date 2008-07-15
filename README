@@ -168,16 +168,38 @@ addins.
             # e.g. monkey patch custom next method into FeedStore.
 
 
+Integration with Django
+-----------------------
+
+There is a Django application in ``feedplatform.integration.django`` that
+you can add to the ``INSTALLED_APPS`` setting of a Django project in
+which you are using FeedPlatform.
+
+The application expects you to have a ``FEEDPLATFORM_CONFIG`` option in
+your Django settings module, removing the need for the environment
+variable. It will then make the ``feedplatform.py`` command line tool
+available as a Django management command:
+
+    ./manage.py feedplatform help
+    ./manage.py feedplatform models
+    ./manage.py feedplatform run --daemonize
+
+
 TODO:
 -----
     - add one or more example projects
-    - add django integration:
-        * a management command
-        * feedplatform config referenced in django settings file
-        * possibly automatic model creation:
+    - possibly add automatic model creation to Django integration, e.g.
+
             AbstractFeed, AbstractItem, AbstractEnclosure = feedplatform.django.generate_models()
 
             class Feed(AbstractFeed):
                 pass
+
+      or, automatically via a setting:
+
+           settings.FEEDPLATFORM_AUTOGENERATE_MODELS = TRUE
+           from feedplatform.integration.django import models
+           models.Feed
+
     - explain and provide better tools to use custom model classes
     - automatic schema creation (generate create table statements)
