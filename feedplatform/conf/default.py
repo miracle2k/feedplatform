@@ -4,6 +4,11 @@ Any value not specified in your own configuration will fallback to
 this. Dict values are usually merged.
 """
 
+# Database connection string - examples:
+#   'sqlite:foo'
+#   'mysql://user:pass@localhost/dbname'
+DATABASE = None
+
 # No addins are loaded.
 ADDINS = []
 

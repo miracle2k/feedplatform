@@ -15,17 +15,13 @@ new models:
 from storm.locals import *
 
 AVAILABLE = {
-    'feeds': [],  # base fields
-    'items': [],  # base fields
+    'feed': {
+        'id': Int(primary=True),
+        'url': Unicode(),
+    },
+    'item': {
+        'feed_id': Int(primary=True),
+        'feed': Reference('feed_id', 'Feed.id'),
+        'guid': Unicode(),
+    },
 }
-
-"""
-feeds:
-    id = Int(primary=True)
-    url = Unicode(max_length=255)
-
-items:
-    feed_id = Int(primary=True)
-    feed = Reference(feed_id, Feed.id)
-    guid = Unicode()
-"""
