@@ -4,8 +4,6 @@ Loads the configuration file as specified by the user through an
 environment variable, and merges it with the default config. Makes
 the result available for other parts of the library to use.
 
-Also provides validation services.
-
 Inspired by Django configuration file implementation.
 
 Common usage:
@@ -48,15 +46,39 @@ class LazyConfig(object):
             if not config: # set but empty string
                 raise KeyError
         except KeyError:
-            raise ImportError("No configuration file found, environment "
-                "variable %s is undefined." % ENVIRONMENT_VARIABLE)
+            # we do not enforce a configuration file, although certain
+            # settings, like the database connection, will be required
+            # at some point.
+            config = None
 
         self._target = Configuration(config)
+
+    def reset(self):
+        """Reset a currently loaded configuration. On next access, a
+        new configuration file will be loaded based your current
+        environment.
+
+        This allows switching to a different configuration file.
+
+        Note that when you set the environement variable after having
+        already accessed the configuration, your custom config file will
+        not be loaded. This is where a reset will help.
+        """
+        self._target = None
 
 
 class Configuration(object):
 
-    def __init__(self, config):
+    def __init__(self, config=None):
+        # initialize self with default settings
+        for setting in dir(default_config):
+            if setting == setting.upper():
+                setattr(self, setting, getattr(default_config, setting))
+
+        # if no config file was provided, skip the rest
+        if config is None:
+            return
+
         # load the config file, either from a file path or
         # dotted python module notation.
         try:
@@ -75,11 +97,6 @@ class Configuration(object):
             raise ImportError, ("Could not import configuration '%s'. It "
                 "might not a valid path, or not a module name available "
                 "via sys.path, or contain syntax errors (%s)") % (config, e)
-
-        # initialize self with default settings
-        for setting in dir(default_config):
-            if setting == setting.upper():
-                setattr(self, setting, getattr(default_config, setting))
 
         # override with user's config
         for setting in dir(mod):
