@@ -10,7 +10,7 @@ this. Dict values are usually merged.
 DATABASE = None
 
 # No addins are loaded.
-ADDINS = []
+ADDINS = ()
 
 # User agent string when needed, e.g. HTTP interactions.
 USER_AGENT = 'FeedPlatform Python Library'
@@ -19,4 +19,4 @@ USER_AGENT = 'FeedPlatform Python Library'
 # which case anything given as the feed url will be passed through to
 # the parser library. That will potentiallly allow the filesystem, as
 # well as parsing of the string directly.
-ENFORCE_URI_SCHEMA = ['http', 'https']
+ENFORCE_URI_SCHEME = ('http', 'https',)

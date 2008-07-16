@@ -141,20 +141,19 @@ As you can see, both tables have a bunch of new fields.
 Available addins
 ----------------
 
-TODO
+To be added.
 
 
 Your own addins
 ~~~~~~~~~~~~~~~
 
-TODO: some basic info, list all the hooks, point to the code of existing
-addins.
-
+To be added, but might look something like this:
 
     class store_enclosures(addins.base):
         def __init(force=False):
             from feedplatform import models
             models.AVAILABLE['enclosure'] = base_enclosure_fields
+            self.log.debug("addin initialized")
 
         def get_columns(self):
             pass
@@ -185,6 +184,64 @@ available as a Django management command:
     ./manage.py feedplatform run --daemonize
 
 
+Configuration options
+---------------------
+
+DATABASE
+~~~~~~~~
+
+Default: *Not available*
+
+A database connection string. This option is required.
+
+Examples:
+
+    - backend:database_name
+    - backend://hostname/database_name
+    - backend://hostname:port/database_name
+    - backend://username:password@hostname/database_name
+    - backend://hostname/database_name?option=value
+    - backend://username@/database_name
+
+ADDINS
+~~~~~~
+
+Default: ``()`` (Empty tuple)
+
+List any number of addins to extend, customize and specifiy the
+functionality you need.
+
+Examples:
+
+    from feedplatform.addins import *
+
+    ADDINS = [
+        addin1(),
+        addin2(),
+        another_addin(),
+    ]
+
+USER_AGENT
+~~~~~~~~~~
+
+Default: ``FeedPlatform Python Library``
+
+Allows you to change the useragent string that is passed along to the
+feedparser library. Used primarily for HTTP interactions, of course.
+
+ENFORCE_URI_SCHEME
+~~~~~~~~~~~~~~~~~~
+
+Default: ``('http', 'https')``
+
+Allows you to limit the supported URI schemes. The feedparser backend
+supports a variety of access methods, including local filenames
+and even string data, which would pose a security risk if you allow users
+to add new feeds to your database without further checks.
+
+You can set it to ``False`` to disable any restrictions completely.
+
+
 TODO:
 -----
     - add one or more example projects
@@ -203,3 +260,5 @@ TODO:
 
     - explain and provide better tools to use custom model classes
     - automatic schema creation (generate create table statements)
+    - let user configure if a feed failure should be logged as a warning
+      or just an info (or an error?)
