@@ -20,7 +20,8 @@ AVAILABLE = {
         'url': Unicode(),
     },
     'item': {
-        'feed_id': Int(primary=True),
+        'id': Int(primary=True),
+        'feed_id': Int(),
         'feed': Reference('feed_id', 'Feed.id'),
         'guid': Unicode(),
     },

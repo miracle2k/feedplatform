@@ -12,70 +12,111 @@ from hashlib import md5
 import feedparser
 
 from feedplatform import hooks
-from feedplatform import conf
-
-def main_loop():
-    # connect to database
-    store = connect()
-
-    feed = store.get_next_feed()
-    while feed:
-        parse_feed(feed)
-        feed = store.get_next_feed()
-
-def parse_feed(feed, kwargs):
-    ########## ====> HOOK: before_feed (feedobj, url, skip)
+from feedplatform.log import log
+from feedplatform.conf import config
+from feedplatform import db
+from feedplatform.db import Feed, Item
 
 
-    ########## ====> HOOK: before__parse (feedobj, url, skip, args)   (right now basically like before_feed, but seperation of concerns)
-    feed = feedparser.parse(self.url, agent=settings.USER_AGENT, **kwargs)
-    # TODO: disallow local files for security reasons?
+def simple_loop():
+    #feed = db.store.get_next_feed()
+    #while feed:
+    #    update_feed(feed)
+    #    feed = db.store.get_next_feed()
+    while True:
+        feeds = db.store.find(Feed)
+        for feed in feeds:
+            update_feed(feed, {})
 
-    # If there is no status attribute and bozo is set, it is sane to
-    # assume that there was a problem downloading the feed. We skip the
-    # actual parsing, but still update the last_update etc. timestamps
-    # at the end.
-    # TODO: Is there a better way to determine this?
-    if feed.bozo and not hasattr(feed, 'status'):
-        ########## ====> HOOK: on_parse_error (feedobj, error)
-        pass # TODO log/handle the error
 
-    ########## ====> HOOK: after_parse (feedobj, feeddict)           (good to collect data addins, redirect handling)
+def update_feed(feed, kwargs):
+    """Parse and update a single feed, as specified by the instance
+    of the ``Feed`` model in ``feed``.
 
-    for entry in feed.entries:
-        ########## ====> HOOK: before_item (feedobj, itemdict, skip)
-        # determine a unique id for the item. if a guid doesn't exist,
-        # try various alternatives.
-        ########## ====> HOOK: before_guid_search
-        guid = entry.guid or \
-               'enclosure:%s'%entry.enclosures[0].href
+    This is the one, main, most important core function, at the
+    epicenter of the package, providing thousands of different hooks
+    to the rest of the world.
+    """
+
+    log.info('Updating feed #%d: %s' % (feed.id, feed.url))
+    feed_dict = feedparser.parse(feed.url, agent=config.USER_AGENT, **kwargs)
+
+    # The bozo feature Universal Feed Parser allow it to parse feeds
+    # that are not well-formed (http://feedparser.org/docs/bozo.html).
+    # While very useful in many cases, it also means that just about
+    # anything, from 404 to parking pages will be represented as a
+    # feed object with the bozo flag set (about without any useful
+    # feed data obviously - for example, the whole page content will
+    # be inside the ``subtitle`` field).
+    #
+    # How do we differentiate between "valid" feed problems like a
+    # missing closing tag, that could potentially be ignored while
+    # still extracting useful content, and completely invalid data?
+    # Simple, we don't. This will be the job of the error handling
+    # addin, and should not be our care right now. Suffice to say
+    # though that it is important for the addin to make sure that
+    # those completely invalid feeds are skipped early so that e.g.
+    # a previously valid feed title in the database is not overridden
+    # with empty or clearly erroneous data.
+    #
+    # We will log the problem, though.
+    if feed_dict.bozo:
+        log.warn('Feed #%d bozo: %s' % (feed.id, feed_dict.bozo_exception))
+
+    for entry_dict in feed_dict.entries:
+
+        # Determine a unique id for the item; this is one of the
+        # few fixed requirements that we have: we need a guid.
+        # Addins can provide new ways to determine one, but if all
+        # fails, we just can't handle the item.
+        guid = _find_guid(entry_dict)
         if not guid:
-            _guidbase = "%s %s"%(entry.get('title'), entry.get('summary'))
-            if _guidbase: guid = md5(_guidbase)
-            else: continue;
-        ########## ====> HOOK: after_guid_search
-        ########## ====> HOOK: no_guid_found
-
-        ########## ====> HOOK: guid_found (return custom item obj)
-        # find an item with that guid
-        try:
-            item_obj = self.items.get(guid=guid)
-            ########## ====> HOOK: after_item_loaded
-        except Item.DoesNotExist:
-            ########## ====> HOOK: before_item_create
-            # not found: create it
-            item_obj = Item()
-            item_obj.feed = self
-            item_obj.guid = guid
-            ########## ====> HOOK: before_item_save
-            item_obj.save()
-            ########## ====> HOOK: after_item_save
+            log.warn('Feed #%d: unable to determine item guid' % (feed.id))
+            continue
         else:
-            # found: check if we should update it
-            if full:  # TODO: better check we we should update it
-                item_obj.save()
+            log.debug('Feed #%d: determined item guid "%s"' % (feed.id, guid))
 
-    ########## ====> HOOK: before_feed_save
-    # TODO: depending on addins, it might not be necessary to save the feed?
-    self.save()
-    ########## ====> HOOK: after_feed_save
+        # does the item already exist?
+        items = list(db.store.find(Item, Item.guid==guid))
+        if len(items) >= 2:
+            # TODO: log a warning/error
+            return
+        elif items:
+            item = items[0]
+        else:
+            item = None
+
+        if not item:
+            # it doesn't, so create it
+            item = Item()
+            item.feed = feed
+            item.guid = guid
+            db.store.add(item)
+            db.store.flush()
+            log.info('Feed #%d: found new item (#%d)' % (feed.id, item.id))
+
+    db.store.commit()
+
+
+def _find_guid(entry_dict):
+    """Helper function to determine the guid of an item.
+
+    Preferably, use use the guid specified. If that fails (lots of
+    feeds don't have them), try hard to come up with a plan B.
+
+    # TODO: refactor this so that addins can easily add their own
+      guid logic; the enclosure-guid should probably be a separate addin,
+      but enabled automatically by the enclosure() addin?
+    """
+    guid = entry_dict.get('guid')
+    if not guid:
+        # for podcast feeds, the enclosure is usually a defining element
+        if 'enclosures' in entry_dict:
+            guid = 'enclosure:%s'% entry_dict.enclosures[0].href
+    if not guid:
+        # try a content hash
+        content = u"%s%s" % (entry_dict.get('title'), entry_dict.get('summary'))
+        if content:
+            hash = md5(content.encode('ascii', 'ignore'))
+            guid = u'content:%s' % hash.hexdigest()
+    return guid

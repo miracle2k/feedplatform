@@ -12,6 +12,9 @@ DATABASE = None
 # No addins are loaded.
 ADDINS = []
 
+# User agent string when needed, e.g. HTTP interactions.
+USER_AGENT = 'FeedPlatform Python Library'
+
 # Allow only specific protocols; set to False to skip the check, in
 # which case anything given as the feed url will be passed through to
 # the parser library. That will potentiallly allow the filesystem, as
