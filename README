@@ -55,9 +55,9 @@ required:
 
     http://www.djangoproject.com/
 
-To run the tests, you will need the py.test library:
+To run the tests, you will need nose:
 
-    http://codespeak.net/py/dist/test.html
+    http://www.somethingaboutorange.com/mrl/projects/nose/
 
 
 Tutorial
@@ -240,6 +240,79 @@ and even string data, which would pose a security risk if you allow users
 to add new feeds to your database without further checks.
 
 You can set it to ``False`` to disable any restrictions completely.
+
+
+Testing FeedPlatform
+--------------------
+
+Nose (http://www.somethingaboutorange.com/mrl/projects/nose/) is used as
+a testrunner. Just do:
+
+    $ nosetests ./feedplatform/tests
+
+Writing tests
+~~~~~~~~~~~~~
+
+The vast majority of tests obviously involves looking at feeds one way
+or another, often in multiple steps, e.g. "if an item was added to the
+feed, will that be picked up"? Testing scenarios like this over and
+over again can be very tedious, repetitive and error prone, so
+FeedPlatform implements it's own little test architecture to streamline
+that process.
+
+Through a nose plugin, in addition to standard python test files we pick
+up all files with an **.at** extension (aggregator test). Those files
+define which feeds are involved in the test, how the feeds evolve during
+the test, if at all, and also the Python test code itself.
+
+A single feed looks like this (remember, multiple of those may be inside
+the same test file:
+
+    [guid_test.xml:3]
+    <rss>
+      <channel>
+        <item>
+          <title>Foo</title>
+          <guid>http://example.org/posts/foo</guid>
+        </item>
+        {% >1 %}
+        <item>
+          <title>Bar</title>
+          <guid>http://example.org/posts/bar</guid>
+        </item>
+        {% end %}
+      </channel>
+    </rss>
+
+    def count():
+        return feed.items.count()
+    1>>>
+    assert count() == 1
+    2>>>
+    assert count() == 2
+    3>>>
+    assert count() == 2
+
+The above feed is called **guid_test.xml** (which is only relevant when
+you want to interact with it from standard python tests). It has three
+passes, which means it will be parsed three times during the lifetime of
+the test.
+
+Before each pass, the feed content is reevaluated, and may change based
+on the {%%} tags. For example, in the above example, during pass 1, only
+the first item will exist. Only in pass two and is the second available.
+
+Finally, the last section, separated by an empty line, uses ordinary
+Python to implement the actual test logic. You can write different test
+code for each pass by prefixing it with **PASSNUM>>>** - everything
+that follows until the next of those separators will be run for this
+particular pass.
+
+A number of variables will automatically be available to you, like
+``feed`` for the object representing the current feed.
+
+If your tests involve HTTPS headers, place them before the feed content,
+separated by an empty line, just like a real HTTP transaction.
 
 
 TODO:
