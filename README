@@ -256,63 +256,50 @@ Writing tests
 The vast majority of tests obviously involves looking at feeds one way
 or another, often in multiple steps, e.g. "if an item was added to the
 feed, will that be picked up"? Testing scenarios like this over and
-over again can be very tedious, repetitive and error prone, so
-FeedPlatform implements it's own little test architecture to streamline
-that process.
+over again can be very tedious and error prone. To streamline that
+process, a simple framework is provided that tries to link the required
+"feed evolutions" to the testcase implementations.
 
-Through a nose plugin, in addition to standard python test files we pick
-up all files with an **.at** extension (aggregator test). Those files
-define which feeds are involved in the test, how the feeds evolve during
-the test, if at all, and also the Python test code itself.
+Such a test case will thus involve multiple "passes", i.e. the feed is
+parsed multiple times, and every time the test code needs to make sure
+that the necessary conditions are met. Using feed evolutions, a test
+module might look like this:
 
-A single feed looks like this (remember, multiple of those may be inside
-the same test file:
+    from tests import feedev
 
-    [guid_test.xml:3]
-    <rss>
-      <channel>
-        <item>
-          <title>Foo</title>
-          <guid>http://example.org/posts/foo</guid>
-        </item>
-        {% >1 %}
-        <item>
-          <title>Bar</title>
-          <guid>http://example.org/posts/bar</guid>
-        </item>
-        {% end %}
-      </channel>
-    </rss>
+    PASSES = 2
 
-    def count():
-        return feed.items.count()
-    1>>>
-    assert count() == 1
-    2>>>
-    assert count() == 2
-    3>>>
-    assert count() == 2
+    class GuidTest(feedev.Feed):
+        content = \"""
+            <item guid="abcdefg" />
+            {% 2 %}
+            <item guid="ehijklm" />
+            {% end %}
+        \"""
 
-The above feed is called **guid_test.xml** (which is only relevant when
-you want to interact with it from standard python tests). It has three
-passes, which means it will be parsed three times during the lifetime of
-the test.
+        def pass1(feed):
+            assert feed.items.count() == 1
 
-Before each pass, the feed content is reevaluated, and may change based
-on the {%%} tags. For example, in the above example, during pass 1, only
-the first item will exist. Only in pass two and is the second available.
+        def pass2(feed):
+            assert feed.items.count() == 2
 
-Finally, the last section, separated by an empty line, uses ordinary
-Python to implement the actual test logic. You can write different test
-code for each pass by prefixing it with **PASSNUM>>>** - everything
-that follows until the next of those separators will be run for this
-particular pass.
+    def test():
+        feedev.testmod()
 
-A number of variables will automatically be available to you, like
-``feed`` for the object representing the current feed.
+The module contains only one nose testcase, which simply instructs the
+our framework to test the current module. It will then, for the number
+of passes requested, update each feed (all ``feedev.Feed`` subclasses)
+through the FeedPlatform libraries (which is what we are testing)!
 
-If your tests involve HTTPS headers, place them before the feed content,
-separated by an empty line, just like a real HTTP transaction.
+On each pass, a  feed's content is reevaluated, and may change based on
+{% %}-tags in the template. In the above example, during pass 1 only
+the first item will exist. In pass two (and above) the second is
+available as well.
+
+Finally, everytime a feed was updated, the framework will call the
+appropriate ``passX`` method, if it exists. This is the place were you
+should put your actual test code. Note that those are static methods -
+they do not take a ``self`` argument.
 
 
 TODO:
