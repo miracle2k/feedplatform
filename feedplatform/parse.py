@@ -78,8 +78,8 @@ def update_feed(feed, kwargs={}):
         else:
             log.debug('Feed #%d: determined item guid "%s"' % (feed.id, guid))
 
-        # does the item already exist?
-        items = list(db.store.find(Item, Item.guid==guid))
+        # does the item already exist *for this feed*?
+        items = list(db.store.find(Item, Item.feed==feed, Item.guid==guid))
         if len(items) >= 2:
             # TODO: log a warning/error
             return
