@@ -7,8 +7,6 @@ effect at all: identifying items.
 
 from tests import feedev
 
-PASSES = 3
-
 class FooFeed(feedev.Feed):
     content = """
         <rss><channel>
