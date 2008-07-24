@@ -77,6 +77,10 @@ def reconfigure():
                 raise ValueError('"%s" is not a valid model name' % table)
             fields[addin].update(new_fields)
 
+    # "Unregister" current models from storm - otherwise we'll see stuff
+    # like "PropertyPathError: Path 'feed_id' matches multiple properties".
+    Storm._storm_property_registry.clear()
+
     # create the actual model objects
     global models
     for name, fields in model_fields.items():
@@ -93,4 +97,9 @@ def reconfigure():
     global __all__
     __all__ = tuple([m for m in models.keys()] + ['store', 'database'])
 
+# TODO: Currently, this will require a reconfigure() whenever the module
+# was imported before the config was finished, even if the database objects
+# and store were never actually used. A better solution would be to create
+# proxy objects by default, and only establish the database connection when
+# it is actually used.
 reconfigure()

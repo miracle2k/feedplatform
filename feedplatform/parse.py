@@ -29,7 +29,7 @@ def simple_loop():
             update_feed(feed, {})
 
 
-def update_feed(feed, kwargs):
+def update_feed(feed, kwargs={}):
     """Parse and update a single feed, as specified by the instance
     of the ``Feed`` model in ``feed``.
 

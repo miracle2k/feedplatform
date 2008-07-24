@@ -1,6 +1,7 @@
 """Test configuration handling/loading.
 """
 
+"""
 ### check if pytest resets modules, environ
 
 - check some imports are possible without config
@@ -11,3 +12,4 @@
 - success load module                -> check setting available
 
 - test that dicts are merged
+"""
