@@ -176,6 +176,14 @@ class FeedEvolutionTest(object):
         self.current_pass = 0
 
     def _initdb(self):
+        """Reset and reinitialize the database for this test.
+
+        This also creates the feeds as rows in the database, and assigns
+        the a *database feed object* to each *test feed definition/class*,
+        i.e.
+
+            feed.dbobj for feed in self.feeds
+        """
         # drop all existing tables
         result = db.store.execute("""SELECT name FROM sqlite_master
                                   WHERE type='table' ORDER BY name""")
@@ -196,13 +204,27 @@ class FeedEvolutionTest(object):
         db.store.commit()
 
     def run(self):
+        """Run the feed evolution.
+
+        Current run-state (i.e. the current pass number) is shared
+        instance-wide.
+
+        If any test raises an exception, the test halts and is
+        considered failed.
+        """
+
         self._initdb()
+
         # TODO: maintain existing handler config
         config.URLLIB2_HANDLERS = (MockHTTPHandler(self),)
+
         for self.current_pass in range(1, self.num_passes+1):
             for feed in self.feeds.values():
                 parse.update_feed(feed.dbobj)
-                # TODO: call test handler
+                testfunc = getattr(feed, 'pass%d'%self.current_pass, None)
+                if testfunc:
+                    testfunc(feed.dbobj)
+
 
     tag_re = re.compile('{%(.*?)%}')
     def get_feed(self, name):
