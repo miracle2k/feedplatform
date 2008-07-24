@@ -53,6 +53,20 @@ class LazyConfig(object):
 
         self._target = Configuration(config)
 
+    def configure(self, **options):
+        """Manually setup the configuration.
+
+        This makes setting up a config dynamically much easier, since
+        you don't have to create a dummy module.
+
+        If a config is already set up, the options you specifiy will
+        simply be applied (i.e. added, or existing values overwritten).
+        """
+        if not self.configured:
+            self._target = Configuration()
+        for name, value in options.items():
+            setattr(self._target, name, value)
+
     def reset(self):
         """Reset a currently loaded configuration. On next access, a
         new configuration file will be loaded based your current
@@ -65,6 +79,10 @@ class LazyConfig(object):
         not be loaded. This is where a reset will help.
         """
         self._target = None
+
+    @property
+    def configured(self):
+        return self._target is not None
 
 
 class Configuration(object):
