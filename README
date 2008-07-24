@@ -276,8 +276,6 @@ module might look like this:
 
     from tests import feedev
 
-    PASSES = 2
-
     class GuidTest(feedev.Feed):
         content = \"""
             <item guid="abcdefg" />
@@ -298,7 +296,9 @@ module might look like this:
 The module contains only one nose testcase, which simply instructs the
 our framework to test the current module. It will then, for the number
 of passes requested, update each feed (all ``feedev.Feed`` subclasses)
-through the FeedPlatform libraries (which is what we are testing)!
+through the FeedPlatform libraries (which is what we are testing)! The
+number of passes is determined by the maximum X of all the ``passX``
+test methods that are defined on any of the feeds.
 
 On each pass, a  feed's content is reevaluated, and may change based on
 {% %}-tags in the template. In the above example, during pass 1 only

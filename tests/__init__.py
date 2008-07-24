@@ -17,8 +17,6 @@ real feed contents for simplicity):
 
     from tests import feedev
 
-    PASSES = 2
-
     class GuidTest(feedev.Feed):
         content = \"""
             <item guid="abcdefg" />
@@ -116,12 +114,6 @@ class FeedEvolutionTestFramework(object):
             finally:
                 del frame
 
-        # the number of passes requested as a required value
-        num_passes = getattr(module, 'PASSES', None)
-        if num_passes is None:
-            raise RuntimeError(("Module %s is not a valid testcase: No "
-                "valid number of PASSES set.") % module)
-
         # find all the test feeds defined in the module
         feeds = {}
         for name in dir(module):
@@ -131,7 +123,7 @@ class FeedEvolutionTestFramework(object):
                    feeds[obj.name()] = obj
 
         # run the test case
-        test = FeedEvolutionTest(feeds, num_passes)
+        test = FeedEvolutionTest(feeds)
         test.run()
 
     class Feed(object):
@@ -171,9 +163,22 @@ class FeedEvolutionTest(object):
     i.e. a single run through multiple parsing passes.
     """
 
-    def __init__(self, feeds, num_passes):
-        self.feeds, self.num_passes = feeds, num_passes
+    def __init__(self, feeds):
+        self.feeds = feeds
         self.current_pass = 0
+        self.num_passes = self._determine_pass_count()
+        if self.num_passes <= 0:
+            raise RuntimeError("Warning: Module %s has no passes" % module)
+
+    re_passfunc = re.compile(r'^pass(\d+)$')
+    def _determine_pass_count(self):
+        max_pass = 0
+        for feed in self.feeds.values():
+            for name in dir(feed):
+                match = self.re_passfunc.match(name)
+                if match:
+                    max_pass = max(max_pass, int(match.groups()[0]))
+        return max_pass
 
     def _initdb(self):
         """Reset and reinitialize the database for this test.
