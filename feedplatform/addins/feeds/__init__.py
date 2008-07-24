@@ -7,9 +7,6 @@ def save_bandwith():
 def update_redirects():
     raise NotImplementedError()
 
-def store_feed_data():
-    raise NotImplementedError()
-
 def download_cover():
     raise NotImplementedError()
 
