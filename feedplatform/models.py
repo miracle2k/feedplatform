@@ -18,6 +18,7 @@ AVAILABLE = {
     'feed': {
         'id': Int(primary=True),
         'url': Unicode(),
+        'items': ReferenceSet('Feed.id', 'Item.feed_id'),
     },
     'item': {
         'id': Int(primary=True),
