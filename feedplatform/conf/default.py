@@ -20,3 +20,8 @@ USER_AGENT = 'FeedPlatform Python Library'
 # the parser library. That will potentiallly allow the filesystem, as
 # well as parsing of the string directly.
 ENFORCE_URI_SCHEME = ('http', 'https',)
+
+# Handlers that will be passed to urllib2 when fetching feeds. This,
+# among other things, allows you to add support for new protocols.
+# Note that you then may have to update ENFORCE_URI_SCHEME as well.
+URLLIB2_HANDLERS = ()

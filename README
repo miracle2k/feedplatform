@@ -241,6 +241,15 @@ to add new feeds to your database without further checks.
 
 You can set it to ``False`` to disable any restrictions completely.
 
+URLLIB2_HANDLERS
+~~~~~~~~~~~~~~~~
+
+Default: ``()`` (Empty tuple)
+
+Custom handlers that will be passed to urllib2 when fetching feeds. This,
+among other things, allows you to add support for new protocols. Note that
+you then might need to update ENFORCE_URI_SCHEME as well.
+
 
 Testing FeedPlatform
 --------------------

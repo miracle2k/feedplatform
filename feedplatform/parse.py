@@ -39,7 +39,9 @@ def update_feed(feed, kwargs):
     """
 
     log.info('Updating feed #%d: %s' % (feed.id, feed.url))
-    feed_dict = feedparser.parse(feed.url, agent=config.USER_AGENT, **kwargs)
+    feed_dict = feedparser.parse(feed.url, agent=config.USER_AGENT,
+                                 handlers=list(config.URLLIB2_HANDLERS),
+                                 **kwargs)
 
     # The bozo feature Universal Feed Parser allow it to parse feeds
     # that are not well-formed (http://feedparser.org/docs/bozo.html).
