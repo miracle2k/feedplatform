@@ -270,18 +270,29 @@ class FeedEvolutionTest(object):
 
             Example input: 1, >1, =3, <2
             """
-            expr = expr.strip().replace(' ', '')  # '\t> 5 ' => '>5'
-            p, v = expr[:1], expr[1:]
-            if not (p in '<>='):
-                # assume now op specified, > is the default
-                p = '>'
-                v = expr
+
+            # normalize: '\t> 5 ' => '>5'
+            expr = expr.strip().replace(' ', '')
+
+            p, v = expr[:2], expr[2:]             # two two char ops
+            if not p in ('>=', '<=',):
+                p, v = expr[:1], expr[1:]         # try one char ops
+                if not (p in '<>='):
+                    # assume now op specified, >= is the default
+                    p = '>='
+                    v = expr
+
+            # if the op is valid, the rest must be a number
             if not v.isdigit():
                 raise ValueError("'%s' not a valid tag expression " % expr)
 
             value = int(v)
-            comp = {'=': operator.eq, '>': operator.gt, '<': operator.lt}[p]
-            return comp(self.current_pass, value)
+            ops = {'=': (operator.eq,),
+                   '>': (operator.gt,),
+                   '<': (operator.lt,),
+                   '>=': (operator.lt, operator.eq),
+                   '<=': (operator.lt, operator.eq)}[p]
+            return any([op(self.current_pass, value) for op in ops])
 
         # render the content using our very simple template language
         output = ""

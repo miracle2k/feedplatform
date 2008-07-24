@@ -46,7 +46,7 @@ class MixFeed(feedev.Feed):
                 <title>A Mix</title>
                 <guid>bar-1</guid>
             </item>
-            {% >2 %}
+            {% 3 %}
             <item>
                 <title>Another Mix</title>
                 <guid>foo-1</guid>    <!-- used in BarFeed! -->
