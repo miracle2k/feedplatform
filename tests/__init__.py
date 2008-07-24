@@ -160,7 +160,7 @@ class FeedEvolutionTestFramework(object):
                         new_attrs[key] = staticmethod(value)
                     else:
                         new_attrs[key] = value
-                return type.__new__(cls, name, bases, attrs)
+                return type.__new__(cls, name, bases, new_attrs)
 
         @classmethod
         def name(cls):
