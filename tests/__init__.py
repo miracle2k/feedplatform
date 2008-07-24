@@ -64,6 +64,12 @@ class FeedEvolutionTestFramework(object):
             config.configure(**{'DATABASE': 'sqlite:'})
             db.reconfigure()
 
+        # Remember the original handlers, so that we can *add* our
+        # fake handler on each, instead of overwriting handlers
+        # that are defined in the configration file - i.e. it is
+        # possible to run the test with additional custom handlers.
+        self.urllib2_handlers = config.URLLIB2_HANDLERS
+
     def testmod(self, module=None):
         """Test the caller's module.
 
@@ -124,6 +130,8 @@ class FeedEvolutionTestFramework(object):
 
         # run the test case
         test = FeedEvolutionTest(feeds)
+        config.URLLIB2_HANDLERS = list(self.urllib2_handlers) +\
+                                  [MockHTTPHandler(test),]
         test.run()
 
     class Feed(object):
@@ -217,11 +225,7 @@ class FeedEvolutionTest(object):
         If any test raises an exception, the test halts and is
         considered failed.
         """
-
         self._initdb()
-
-        # TODO: maintain existing handler config
-        config.URLLIB2_HANDLERS = (MockHTTPHandler(self),)
 
         for self.current_pass in range(1, self.num_passes+1):
             for feed in self.feeds.values():
