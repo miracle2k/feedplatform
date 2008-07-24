@@ -232,7 +232,14 @@ class FeedEvolutionTest(object):
                 parse.update_feed(feed.dbobj)
                 testfunc = getattr(feed, 'pass%d'%self.current_pass, None)
                 if testfunc:
-                    testfunc(feed.dbobj)
+                    try:
+                        testfunc(feed.dbobj)
+                    except Exception, e:
+                        emsg = e.__class__.__name__
+                        if str(e):
+                            emsg = '%s (%s)' % (e, emsg)
+                        raise Exception('Pass %d for "%s" failed: %s' %
+                            (self.current_pass, feed.name(), emsg))
 
 
     tag_re = re.compile('{%(.*?)%}')
