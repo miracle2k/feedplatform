@@ -129,7 +129,7 @@ class FeedEvolutionTestFramework(object):
                    feeds[obj.name()] = obj
 
         # run the test case
-        test = FeedEvolutionTest(feeds)
+        test = FeedEvolutionTest(feeds, module)
         config.URLLIB2_HANDLERS = list(self.urllib2_handlers) +\
                                   [MockHTTPHandler(test),]
         test.run()
@@ -171,7 +171,7 @@ class FeedEvolutionTest(object):
     i.e. a single run through multiple parsing passes.
     """
 
-    def __init__(self, feeds):
+    def __init__(self, feeds, module):
         self.feeds = feeds
         self.current_pass = 0
         self.num_passes = self._determine_pass_count()
