@@ -51,8 +51,6 @@ class NoDatabaseErrorProxy(object):
     __setattr__ = __getattr__
 
 
-# TODO: do we need to take more care to ensure this isn't run more than
-# once, and that there are no race conditions?
 def reconfigure():
     """Reconfigure database connection and models based on the current
     configuration.
@@ -82,7 +80,7 @@ def reconfigure():
     Storm._storm_property_registry.clear()
 
     # create the actual model objects
-    global models
+    new_models = []
     for name, fields in model_fields.items():
         model_name = name.capitalize()
         attrs = {'__storm_table__': name}
@@ -91,7 +89,10 @@ def reconfigure():
 
         # make available on module level
         setattr(sys.modules[__name__], model_name, model)
-        models[model_name] = model
+        new_models[model_name] = model
+
+    global models
+    models = new_models
 
     # update __all__ with all models
     global __all__
