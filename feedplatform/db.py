@@ -19,53 +19,52 @@ store = None
 models = {}
 
 
-class LazyStore(object):
-    """Simple wrapper object for a Storm database store that defers
-    actual instantiation until first accessed.
+class DatabaseProxy(object):
+    """Proxy an object that shall be created on demand, when accessed,
+    by the creator function passed to ``__init__``.
+
+    Necessary since some database objects like the Store cannot be
+    instantiated without a valid connection.
+
+    Futher, we explicitly fail with an exception if no database
+    connection data is available at all.
     """
 
-    def __init__(self, database):
-        self._database = database
-        self._store = None
+    def __init__(self, create_func):
+        self.__dict__['obj'] = None
+        self.__dict__['create_func'] = create_func
+
+    def _connect(self):
+        if not self.obj:
+            if not config.DATABASE:
+                raise ValueError('The database is not configured (see '
+                    'the DATABASE setting)')
+            self.__dict__['obj'] = self.create_func()
 
     def __getattr__(self, name):
-        if self._store is None:
-            self._init_store()
-        return getattr(self._store, name)
+        self._connect()
+        return getattr(self.obj, name)
 
     def __setattr__(self, name, value):
-        if name in ['_store', '_database']:
-            self.__dict__[name] = value
-        else:
-            if self._store is None:
-                self._init_store()
-            return setattr(self._store, name)
-
-    def _init_store(self):
-        self._store = Store(self._database)
-
-class NoDatabaseErrorProxy(object):
-    def __getattr__(self, *args, **kwargs):
-        raise ValueError('The database is not configured (see the '
-            'DATABASE setting)')
-    __setattr__ = __getattr__
+        self._connect()
+        return setattr(self.obj, name, value)
 
 
 def reconfigure():
     """Reconfigure database connection and models based on the current
     configuration.
+
+    This is only necessary if the database objects already have been
+    accessed (since they are created on demand), or if the available
+    models have changed.
     """
 
-    # setup the database connection and store; note that at this point
-    # no connection data is required; it will be checked only when someone
-    # first attempts to use the store.
+    # Setup the database connection and store; note that at this point
+    # no valid connection data is required; it will be checked only
+    # when someone first attempts to use the objects.
     global database, store
-    if config.DATABASE:
-        database = create_database(config.DATABASE)
-        store = LazyStore(database)
-    else:
-        database = NoDatabaseErrorProxy()
-        store = NoDatabaseErrorProxy()
+    database = DatabaseProxy(lambda: create_database(config.DATABASE))
+    store = DatabaseProxy(lambda: Store(database))
 
     # collect fields for all the models
     model_fields = AVAILABLE_MODELS.copy()
@@ -80,7 +79,7 @@ def reconfigure():
     Storm._storm_property_registry.clear()
 
     # create the actual model objects
-    new_models = []
+    new_models = {}
     for name, fields in model_fields.items():
         model_name = name.capitalize()
         attrs = {'__storm_table__': name}
@@ -98,9 +97,4 @@ def reconfigure():
     global __all__
     __all__ = tuple([m for m in models.keys()] + ['store', 'database'])
 
-# TODO: Currently, this will require a reconfigure() whenever the module
-# was imported before the config was finished, even if the database objects
-# and store were never actually used. A better solution would be to create
-# proxy objects by default, and only establish the database connection when
-# it is actually used.
 reconfigure()
