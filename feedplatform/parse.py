@@ -18,15 +18,25 @@ from feedplatform import db
 from feedplatform.db import Feed, Item
 
 
-def simple_loop():
+def simple_loop(callback=None):
+    """Loop forever, and update feeds.
+
+    Callback will be run every time a feed was updated, and is
+    expected to take one argument, the number of iterations so far. If
+    it returns True, the loop will stop.
+    """
     #feed = db.store.get_next_feed()
     #while feed:
     #    update_feed(feed)
     #    feed = db.store.get_next_feed()
+    counter = 0
     while True:
         feeds = db.store.find(Feed)
         for feed in feeds:
+            counter += 1
             update_feed(feed, {})
+            if callback and callback(counter):
+                return True
 
 
 def update_feed(feed, kwargs={}):
