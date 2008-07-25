@@ -331,3 +331,12 @@ TODO:
     - automatic schema creation (generate create table statements)
     - let user configure if a feed failure should be logged as a warning
       or just an info (or an error?)
+    - allow addings to return multiple guids; helpful to migrate to another
+      guid scheme; would even allow more flexible guid schemes, e.g. based
+      on alternatively 'updated' or 'created' timestamps. by storing
+      information about which one was used within the guid, if a feed used
+      only 'created', but at some point adds 'updated' fields as well,
+      items in the database that were added with 'created' would still be
+      found and identified - and could be migrated to 'updated'.
+    - support dry-run functionality (see what would happen if a feed were
+      to be updated, but do not write to database).
