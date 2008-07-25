@@ -105,7 +105,7 @@ class Configuration(object):
                 name = path.basename(config)
                 sys.path += [basedir]
                 try:
-                    mod = __import__(name, {}, {}, [''])
+                    mod = __import__(name[:-3], {}, {}, [''])
                 finally:
                     sys.path.remove(basedir)
 
