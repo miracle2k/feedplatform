@@ -213,7 +213,7 @@ functionality you need.
 
 Examples:
 
-    from feedplatform.addins import *
+    from feedplatform.lib import *
 
     ADDINS = [
         addin1(),
@@ -338,5 +338,11 @@ TODO:
       only 'created', but at some point adds 'updated' fields as well,
       items in the database that were added with 'created' would still be
       found and identified - and could be migrated to 'updated'.
+    - related to the above, we could provide a special "solid" mode (via
+      a configuration option) that would always collect all possible guids
+      from all addins, and use an existing item if any of them matches.
+      then, even feeds that add guids at a later point will not have
+      duplicates, although of course there is increased danger of false
+      positives, as well as a performance cost.
     - support dry-run functionality (see what would happen if a feed were
       to be updated, but do not write to database).

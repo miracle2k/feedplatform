@@ -21,8 +21,8 @@ def simple_loop(callback=None):
     """Loop forever, and update feeds.
 
     Callback will be run every time a feed was updated, and is
-    expected to take one argument, the number of iterations so far. If
-    it returns True, the loop will stop.
+    expected to take one argument, the number of iterations so far.
+    If it returns True, the loop will stop.
     """
     #feed = db.store.get_next_feed()
     #while feed:
@@ -80,12 +80,18 @@ def update_feed(feed, kwargs={}):
         # few fixed requirements that we have: we need a guid.
         # Addins can provide new ways to determine one, but if all
         # fails, we just can't handle the item.
-        guid = _find_guid(entry_dict)
+        guid = hooks.trigger('get_guid')
         if not guid:
+            guid = entry_dict.get('guid')
+        if not guid:
+            guid = hooks.trigger('need_guid', args=[feed, entry_dict])
+
+        if guid:
+            log.debug('Feed #%d: determined item guid "%s"' % (feed.id, guid))
+        else:
+            hooks.trigger('no_guid')
             log.warn('Feed #%d: unable to determine item guid' % (feed.id))
             continue
-        else:
-            log.debug('Feed #%d: determined item guid "%s"' % (feed.id, guid))
 
         # does the item already exist *for this feed*?
         items = list(db.store.find(db.Item,
@@ -93,6 +99,7 @@ def update_feed(feed, kwargs={}):
                                    db.Item.guid==guid))
         if len(items) >= 2:
             # TODO: log a warning/error
+            # TODO: test for this case
             return
         elif items:
             item = items[0]
@@ -109,27 +116,3 @@ def update_feed(feed, kwargs={}):
             log.info('Feed #%d: found new item (#%d)' % (feed.id, item.id))
 
     db.store.commit()
-
-
-def _find_guid(entry_dict):
-    """Helper function to determine the guid of an item.
-
-    Preferably, use use the guid specified. If that fails (lots of
-    feeds don't have them), try hard to come up with a plan B.
-
-    # TODO: refactor this so that addins can easily add their own
-      guid logic; the enclosure-guid should probably be a separate addin,
-      but enabled automatically by the enclosure() addin?
-    """
-    guid = entry_dict.get('guid')
-    if not guid:
-        # for podcast feeds, the enclosure is usually a defining element
-        if 'enclosures' in entry_dict:
-            guid = 'enclosure:%s'% entry_dict.enclosures[0].href
-    if not guid:
-        # try a content hash
-        content = u"%s%s" % (entry_dict.get('title'), entry_dict.get('summary'))
-        if content:
-            hash = md5(content.encode('ascii', 'ignore'))
-            guid = u'content:%s' % hash.hexdigest()
-    return guid

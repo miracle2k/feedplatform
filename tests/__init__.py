@@ -50,6 +50,7 @@ from feedplatform.conf import config
 from feedplatform import parse
 from feedplatform import db
 from feedplatform import log
+from feedplatform import addins
 
 
 __all__ = ('feedev',)
@@ -133,8 +134,11 @@ class FeedEvolutionTestFramework(object):
                if issubclass(obj, FeedEvolutionTestFramework.Feed):
                    feeds[obj.name()] = obj
 
+        # a testcase usually defines which addins it uses
+        addins = getattr(module, 'ADDINS', [])
+
         # run the test case
-        test = FeedEvolutionTest(feeds, module)
+        test = FeedEvolutionTest(feeds, addins, module)
         config.URLLIB2_HANDLERS = list(self.urllib2_handlers) +\
                                   [MockHTTPHandler(test),]
         test.run()
@@ -176,8 +180,9 @@ class FeedEvolutionTest(object):
     i.e. a single run through multiple parsing passes.
     """
 
-    def __init__(self, feeds, module):
+    def __init__(self, feeds, addins, module):
         self.feeds = feeds
+        self.addins = addins
         self.current_pass = 0
         self.num_passes = self._determine_pass_count()
         if self.num_passes <= 0:
@@ -202,7 +207,10 @@ class FeedEvolutionTest(object):
 
             feed.dbobj for feed in self.feeds
         """
-        # drop all existing tables
+
+        # Drop all existing tables; normally, since we are using a memory
+        # sqlite db, a ``db.reconfigure()`` would be enough; we want to
+        # optionally support other db setups as well, though.
         result = db.store.execute("""SELECT name FROM sqlite_master
                                   WHERE type='table' ORDER BY name""")
         for row in result.get_all():
@@ -230,7 +238,11 @@ class FeedEvolutionTest(object):
         If any test raises an exception, the test halts and is
         considered failed.
         """
+
         self._initdb()
+
+        config.ADDINS = self.addins
+        addins.reinstall()
 
         for self.current_pass in range(1, self.num_passes+1):
             for feed in self.feeds.values():
