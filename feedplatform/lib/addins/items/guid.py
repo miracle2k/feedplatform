@@ -15,6 +15,17 @@ Nick Bradbury's FeedDemon, a popular Windows feedreader:
     2) If date specified: <title> + <pubDate> (or <title> + <dc:date>)
     3) If link specified: <title> + <link>
     4) Use <title>
+
+You can replicate that behaviour like so:
+
+    ADDINS += [
+        guid_by_content(fields=('title', 'date')),
+        guid_by_content(fields=('title', 'link')),
+        guid_by_content(fields=('title')),
+    ]
+
+    # TODO: Not true! Nr. 1 will match even if date doesn't exist; maybe
+    introduce a require=(fields...) parameter syntax?
 """
 
 from feedplatform import addins
@@ -30,8 +41,28 @@ __all__ = (
 
 
 class guid_by_content(addins.base):
+    """Generates a guid by hashing selected item data fields.
 
-    def __init__(self, fields=('title', 'summary'), allow_empty=False,
+    By default, those fields are ``title`` and ``description``,
+    although you may use the ``fields`` option to change that
+    to your liking.
+
+    Note that all the fields will be used to generate the
+    hash - that is, if any of them changes, an item will be
+    considered new.
+
+    By default, the guids are prefixed with ``content:`` for
+    identification. You may override this using the ``prefix``
+    parameter, or disable it completely by passing ``False``.
+
+    By default, if all requested content fields are missing,
+    this addin passes (no guid is generated). You can change
+    that behaviour by use of ``allow_empty``.
+
+    The hash function used is md5.
+    """
+
+    def __init__(self, fields=('title', 'description'), allow_empty=False,
                  prefix='content:'):
         self.fields = fields
         self.allow_empty = allow_empty
@@ -46,9 +77,9 @@ class guid_by_content(addins.base):
                 content += unicode(value)
 
         # return has hash
-        if content:
+        if content or self.allow_empty:
             hash = md5(content.encode('ascii', 'ignore'))
-            result = u'%s%s' % (self.prefix, hash.hexdigest())
+            result = u'%s%s' % (self.prefix or '', hash.hexdigest())
             return result
 
         return None

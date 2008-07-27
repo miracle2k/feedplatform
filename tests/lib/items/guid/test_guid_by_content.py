@@ -9,7 +9,8 @@ from tests import feedev
 from feedplatform.db import Item
 from feedplatform.lib import guid_by_content
 
-ADDINS = [guid_by_content(prefix='cnt::', fields=('title', 'link'))]
+ADDINS = [guid_by_content(prefix='cnt::', fields=('title', 'link'),
+                          allow_empty=False)]
 
 class TestFeed(feedev.Feed):
     content = """
@@ -30,6 +31,10 @@ class TestFeed(feedev.Feed):
                 {% 4 %}<title>Good item with a guid</title>{% end %}
                 <guid>123456</guid>
             </item>
+
+            {% 5 %}
+            <item></item>
+            {% end %}
         </channel></rss>
     """
 
@@ -56,6 +61,18 @@ class TestFeed(feedev.Feed):
         # we also want to make sure that the <guid> element is indeed
         # use, i.e. preferred over the content hash.
         assert feed.items.find(Item.guid == u'123456').count() == 1
+
+    def pass5(feed):
+        # guids are not generated for empty content bases,
+        # so no change in item count
+        assert feed.items.count() == 4
+
+        # now allow it
+        ADDINS[0].allow_empty = True
+
+    def pass6(feed):
+        # now the last item is picked up, because a guid is generated
+        assert feed.items.count() == 5
 
 def test():
     feedev.testmod()
