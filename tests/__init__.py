@@ -305,7 +305,7 @@ class FeedEvolutionTest(object):
             ops = {'=': (operator.eq,),
                    '>': (operator.gt,),
                    '<': (operator.lt,),
-                   '>=': (operator.lt, operator.eq),
+                   '>=': (operator.gt, operator.eq),
                    '<=': (operator.lt, operator.eq)}[p]
             return any([op(self.current_pass, value) for op in ops])
 
