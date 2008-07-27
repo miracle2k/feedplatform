@@ -6,9 +6,8 @@ from feedplatform.management import call_command
 from feedplatform import conf
 
 def test_django_integration():
-    """Check that the output of a manual "call_command" matches what we
-    get from executing ./manage.py.
-    """
+    # Check that the output of a manual "call_command" matches what
+    # we get from executing ./manage.py.
 
     # if django is not installed, don't bother with this test
     try:

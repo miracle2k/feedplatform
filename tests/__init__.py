@@ -386,7 +386,11 @@ class MockHTTPHandler(urllib2.BaseHandler):
 
     def http_open(self, req):
         name = req.get_selector()[1:]    # remove leading /
-        content = self.store.get_feed(name)
+        try:
+            content = self.store.get_feed(name)
+        except Exception, e:
+            print >> sys.stderr, 'ERROR: Failed to render "%s": %s' % (name, e)
+            content = ""
         return MockHTTPResponse(200, 'OK', {}, content)
 
     """def handle304Response(self, lmod, etag):
