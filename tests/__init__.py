@@ -109,6 +109,11 @@ class FeedEvolutionTestFramework(object):
         global config
         from feedplatform.conf import config
 
+        # By this time the nose testrunner as redirected stdout. Reset
+        # the log (it might still point to the real stdout) to make sure
+        # that any messages will indeed be captured by nose.
+        log.reset()
+
         # If no explicit module was passed, try to find the caller's
         # module by inspecting the stack.
         # Use tbe try-finally pattern explained in the docs:
