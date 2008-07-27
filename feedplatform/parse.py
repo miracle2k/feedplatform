@@ -15,7 +15,6 @@ from feedplatform import hooks
 from feedplatform.log import log
 from feedplatform.conf import config
 from feedplatform import db
-from feedplatform.db import Feed, Item
 
 
 def simple_loop(callback=None):
@@ -31,7 +30,7 @@ def simple_loop(callback=None):
     #    feed = db.store.get_next_feed()
     counter = 0
     while True:
-        feeds = db.store.find(Feed)
+        feeds = db.store.find(db.Feed)
         for feed in feeds:
             counter += 1
             update_feed(feed, {})
@@ -89,7 +88,9 @@ def update_feed(feed, kwargs={}):
             log.debug('Feed #%d: determined item guid "%s"' % (feed.id, guid))
 
         # does the item already exist *for this feed*?
-        items = list(db.store.find(Item, Item.feed==feed, Item.guid==guid))
+        items = list(db.store.find(db.Item,
+                                   db.Item.feed==feed,
+                                   db.Item.guid==guid))
         if len(items) >= 2:
             # TODO: log a warning/error
             return
@@ -100,7 +101,7 @@ def update_feed(feed, kwargs={}):
 
         if not item:
             # it doesn't, so create it
-            item = Item()
+            item = db.Item()
             item.feed = feed
             item.guid = guid
             db.store.add(item)

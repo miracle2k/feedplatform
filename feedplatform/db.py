@@ -67,12 +67,13 @@ def reconfigure():
     store = DatabaseProxy(lambda: Store(database))
 
     # collect fields for all the models
-    model_fields = AVAILABLE_MODELS.copy()
+    blueprints = AVAILABLE_MODELS.copy()
     for addin in config.ADDINS:
+        # TODO: this is not working right
         for name, new_fields in addin.get_columns():
             if not table in AVAILABLE_MODELS:
                 raise ValueError('"%s" is not a valid model name' % table)
-            fields[addin].update(new_fields)
+            blueprints[addin].update(new_fields)
 
     # "Unregister" current models from storm - otherwise we'll see stuff
     # like "PropertyPathError: Path 'feed_id' matches multiple properties".
@@ -80,10 +81,15 @@ def reconfigure():
 
     # create the actual model objects
     new_models = {}
-    for name, fields in model_fields.items():
+    for name, fields in blueprints.items():
         model_name = name.capitalize()
         attrs = {'__storm_table__': name}
-        attrs.update(fields)
+        for field_name, field_value in fields.items():
+            if isinstance(field_value, tuple):
+                klass, args, kwargs = field_value
+                field_value = klass(*args, **kwargs)
+            attrs[field_name] = field_value
+
         model = type(model_name, (Storm,), attrs)
 
         # make available on module level
