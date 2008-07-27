@@ -234,9 +234,12 @@ class FeedEvolutionTest(object):
 
         for self.current_pass in range(1, self.num_passes+1):
             for feed in self.feeds.values():
-                parse.update_feed(feed.dbobj)
                 testfunc = getattr(feed, 'pass%d'%self.current_pass, None)
                 if testfunc:
+                    # Try to be speedier by only parsing feeds when they
+                    # actually have a handler for the current pass.
+                    parse.update_feed(feed.dbobj)
+
                     try:
                         testfunc(feed.dbobj)
                     except Exception, e:
