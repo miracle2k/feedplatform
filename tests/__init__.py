@@ -332,17 +332,23 @@ class FeedEvolutionTest(object):
             token = bit.strip()
 
             if is_tag and token == 'end':
-                skipping = False
                 open_tags -= 1
                 if open_tags < 0:
                     raise Exception('end tag mismatch')
-
-            elif skipping:
-                continue
+                if open_tags < skipping:
+                    skipping = False
 
             elif is_tag:
                 open_tags += 1
-                skipping = not evaluate_tag(token)
+                if not skipping:
+                    if not evaluate_tag(token):
+                       # skip until tag-level falls below current state
+                       # again, e.g. account for nested tags to find
+                       # the right "end", from where we'll pick it up.
+                       skipping = open_tags
+
+            elif skipping:
+                continue
 
             else:
                 output += bit
