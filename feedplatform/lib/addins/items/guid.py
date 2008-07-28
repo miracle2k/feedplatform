@@ -86,12 +86,21 @@ class guid_by_content(addins.base):
 
 
 class guid_by_enclosure(addins.base):
-    """
-    for podcast feeds, the enclosure is usually a defining element
+    """Generates a guid based the enclosure attached to an item.
 
-    Note that this only looks at the first enclosure (spec is unclear, many
-    programs only support one, some more. generally we do support more, but
-    not in this case).http://www.reallysimplesyndication.com/2004/12/21#a221
+    The enclosure URL will be used as the guid.
+
+    For podcast feeds, the enclosure is usually a defining element
+    of the item. If you are working in such a scenario, you probably
+    want this addin high up in your list.
+
+    Note that this only looks at the first enclosure (see the
+    enclosure support addin for more information on the subject of
+    multiple enclosures).
+
+    Attention: This requires our patched version of feedparser -
+    the original will always fallback to a enclosure url if a guid
+    is missing, which is not controllable from our side.
     """
 
     def __init__(self, prefix='enclosure:'):
@@ -100,9 +109,11 @@ class guid_by_enclosure(addins.base):
     def on_need_guid(self, feed, item_dict):
         enclosures = item_dict.get('enclosures')
         if enclosures and len(enclosures) > 0:
-            enclosure = enclosures[0]
-            if enclosure.href:
-                return '%s%s' % (self.prefix, enclosure.href)
+            enc_href = enclosures[0].get('href')
+            if enc_href:
+                return '%s%s' % (self.prefix or '', enc_href)
+
+        return None
 
 
 class guid_by_link(addins.base):

@@ -9,8 +9,8 @@ on this code.
 """
 
 from hashlib import md5
-import feedparser
 
+from feedplatform.deps import feedparser
 from feedplatform import hooks
 from feedplatform.log import log
 from feedplatform.conf import config

@@ -1,10 +1,3 @@
-"""Test the guid handling of the core parser.
-
-Addins may add additional guid sources, and those will be tested
-separately. Here, we simply deal with whether guids have the desired
-effect at all: identifying items.
-"""
-
 from tests import feedev
 from feedplatform.db import Item
 from feedplatform.lib import guid_by_content
