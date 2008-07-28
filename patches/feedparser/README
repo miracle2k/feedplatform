@@ -7,5 +7,8 @@ The patches are managed using Stacked Git.
 no-enclosure-as-id
 ------------------
 
-Fedparser automatically uses an enclosure url as the item id/guid.
-However, we want to provide our own addin to do this optionally.
+Fedparser automatically uses an enclosure url as the item id/guid. We
+however want to provide our own addin to do this optionally. If this
+patch is not applied, the ``guid_by_enclosure`` addin will have no
+effect, and Feedparser's own enclosure-as-id functionality will have
+preference over any custom addins.
