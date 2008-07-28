@@ -55,6 +55,7 @@ _HOOKS = {}
 def reset():
     """Remove all registered callbacks.
     """
+    global _HOOKS
     _HOOKS = {}
 
 
