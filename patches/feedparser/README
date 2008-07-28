@@ -1,0 +1,11 @@
+Patches to Universal Feed Parser. Not all are strictly required.
+The builtin version of feedparser.py has those already applied.
+
+The patches are managed using Stacked Git.
+
+
+no-enclosure-as-id
+------------------
+
+Fedparser automatically uses an enclosure url as the item id/guid.
+However, we want to provide our own addin to do this optionally.

@@ -1,0 +1,25 @@
+Do not use an item's enclosure href as a fallback if an id (guid) is missing.
+
+From: melsdoerfer <michael@elsdoerfer.com>
+
+
+---
+
+ feedparser/feedparser.py |    3 ---
+ 1 files changed, 0 insertions(+), 3 deletions(-)
+
+
+diff --git a/feedparser/feedparser.py b/feedparser/feedparser.py
+index 37a1a29..6ecc7a0 100644
+--- a/feedparser/feedparser.py
++++ b/feedparser/feedparser.py
+@@ -1476,9 +1476,6 @@ class _FeedParserMixin:
+         context = self._getContext()
+         attrsD['rel']='enclosure'
+         context.setdefault('links', []).append(FeedParserDict(attrsD))
+-        href = attrsD.get('href')
+-        if href and not context.get('id'):
+-            context['id'] = href
+             
+     def _start_source(self, attrsD):
+         self.insource = 1
