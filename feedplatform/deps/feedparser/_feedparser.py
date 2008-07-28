@@ -1476,9 +1476,6 @@ class _FeedParserMixin:
         context = self._getContext()
         attrsD['rel']='enclosure'
         context.setdefault('links', []).append(FeedParserDict(attrsD))
-        href = attrsD.get('href')
-        if href and not context.get('id'):
-            context['id'] = href
             
     def _start_source(self, attrsD):
         self.insource = 1
