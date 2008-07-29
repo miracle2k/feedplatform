@@ -28,14 +28,17 @@ def simple_loop(callback=None):
     #while feed:
     #    update_feed(feed)
     #    feed = db.store.get_next_feed()
+    do_return = lambda: callback and callback(counter)
     counter = 0
     while True:
         feeds = db.store.find(db.Feed)
         for feed in feeds:
             counter += 1
             update_feed(feed, {})
-            if callback and callback(counter):
-                return True
+            if do_return():
+                return
+        if do_return():
+            return
 
 
 def update_feed(feed, kwargs={}):
