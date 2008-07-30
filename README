@@ -141,11 +141,24 @@ As you can see, both tables have a bunch of new fields.
 Available addins
 ----------------
 
-To be added.
+A number of addins are provided to let you implement the core
+functionality of an aggregator without much effort. They are all inside
+``feedplatform.lib``, so you probably want to start your config file
+with:
+
+    from feedplatform.lib import *
+
+Then, the following addins are waiting for you to use them. For now,
+see the docstrings in the source code of each for more information.
+
+    * guid_by_content
+    * guid_by_enclosure
+    * guid_by_link
+    * guid_by_date
 
 
 Your own addins
-~~~~~~~~~~~~~~~
+---------------
 
 Writing an addin is hopefully pretty straightforward - while the built
 functionality should cover some good ground, the ultimate flexibility
