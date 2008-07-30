@@ -30,6 +30,7 @@ You can replicate that behaviour like so:
 
 from feedplatform import addins
 from hashlib import md5
+import calendar
 
 
 __all__ = (
@@ -101,6 +102,10 @@ class guid_by_enclosure(addins.base):
     Attention: This requires our patched version of feedparser -
     the original will always fallback to a enclosure url if a guid
     is missing, which is not controllable from our side.
+
+    By default, the guids are prefixed with ``enclosure:`` for
+    identification. You may override this using the ``prefix``
+    parameter, or disable it completely by passing ``False``.
     """
 
     def __init__(self, prefix='enclosure:'):
@@ -117,7 +122,56 @@ class guid_by_enclosure(addins.base):
 
 
 class guid_by_link(addins.base):
-    pass
+    """Generates a guid based on the <link> element of an item.
+
+    The link url itself will be used as the guid. This differs from
+    ``guid_by_content`` which could be used on the link-field with
+    much the same effect, but would store a hash.
+
+    This can go terribly wrong: There are a number of feeds out there
+    which use a common base url for all items.
+
+    By default, the guids are prefixed with ``link:`` for
+    identification. You may override this using the ``prefix``
+    parameter, or disable it completely by passing ``False``.
+    """
+
+    def __init__(self, prefix='link:'):
+        self.prefix = prefix
+
+    def on_need_guid(self, feed, item_dict):
+        link = item_dict.get('link')
+        if link:
+            return '%s%s' % (self.prefix or '', link)
+
+        return None
+
 
 class guid_by_date(addins.base):
-    pass
+    """Generates a guid based on the date of an item.
+
+    The date as a Unix timestamp will be used as the guid. A
+    similar effect could be achieved using ``guid_by_content``,
+    which would store a hash. However, what makes this one slightly
+    better is that if the feed starts giving dates in a different
+    timezone, it will still be able to identify items correctly.
+
+    The above also implies that a valid date is required, that we
+    are able to parse. No guids will be provided for items with
+    invalid dates by this addin.
+
+    By default, the guids are prefixed with ``date:`` for
+    identification. You may override this using the ``prefix``
+    parameter, or disable it completely by passing ``False``.
+    """
+
+    def __init__(self, prefix='date:'):
+        self.prefix = prefix
+
+    def on_need_guid(self, feed, item_dict):
+        date_tuple = item_dict.get('date_parsed')
+        if date_tuple:
+            return u'%s%s' % (self.prefix or '',
+                             int(calendar.timegm(date_tuple)))
+
+        return None
