@@ -75,9 +75,9 @@ def add_callback(name, func, priority=0):
         raise ValueError('The callback (%s) is already registered' % func)
 
     _HOOKS[name][func] = priority
-    _HOOKS[name] = sorted(_HOOKS[name].iteritems(),
-                          key=lambda (k,v): (v,k),
-                          reverse=True)
+    _HOOKS[name] = dict(sorted(_HOOKS[name].iteritems(),
+                               key=lambda (k,v): (v,k),
+                               reverse=True))
 
 
 def trigger(name, args=[], kwargs={}, all=False):
@@ -91,7 +91,7 @@ def trigger(name, args=[], kwargs={}, all=False):
 
     _validate_hook_name(name)
 
-    for func, priority in _HOOKS.get(name, {}):
+    for func, priority in _HOOKS.get(name, {}).iteritems():
         result = func(*args, **kwargs)
         if result:
             return result
