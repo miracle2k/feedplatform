@@ -93,7 +93,7 @@ def trigger(name, args=[], kwargs={}, all=False):
 
     for func, priority in _HOOKS.get(name, {}).iteritems():
         result = func(*args, **kwargs)
-        if result:
+        if result and not all:
             return result
 
 
