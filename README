@@ -147,24 +147,37 @@ To be added.
 Your own addins
 ~~~~~~~~~~~~~~~
 
-To be added, but might look something like this:
+Writing an addin is hopefully pretty straightforward - while the built
+functionality should cover some good ground, the ultimate flexibility
+available through custom addins is what FeedPlatform was created for.
 
-    class store_enclosures(addins.base):
-        def __init(force=False):
-            from feedplatform import models
-            models.AVAILABLE['enclosure'] = base_enclosure_fields
-            self.log.debug("addin initialized")
+The first step is to decide at which point you need to hook into the
+parser. A list of available hooks can be found in the
+``feedplatform.hooks`` module.
 
-        def get_columns(self):
-            pass
+While the addin itself may be any class that implements a ``setup()``
+method (which is called to ask the addin to register it's callbacks),
+in practice it is usually much easier to inherit from
+``feedplatform.addins.base``. Instead of a manual setup, you may then
+just implement ``on_**hookname**`` methods:
 
-        def on_some_hook():
-            # will automatically be registered as a callback
-            pass
+    import uuid
+    from feedplatform import addins
 
-        def configured(self):
-            from feedplatform import db
-            # e.g. monkey patch custom next method into FeedStore.
+    class random_guid(addins.base):
+        def on_need_guid(self, feed, item_dict):
+            return uuid.uuid4().urn
+
+    ADDINS += [random_guid()]
+
+In this example, we provide a handler for ``need_guid``, which is
+triggered when the parser can't find a guid for an item. When our
+handler is called (assuming no other plugins before us already provide
+a guid), we simply return a randomly generated identifer (obviously,
+this addin isn't all that useful).
+
+Looking at the available addins in ``feedplatform.lib`` should give you
+some idea of how various things could be approached.
 
 
 Integration with Django
