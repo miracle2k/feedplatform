@@ -45,6 +45,10 @@ SUPPORTED_HOOKS = [
     # both ``get_item`` and the default code
     # failed.
     'need_item',
+
+    # Dummy test hook. Never actually called,
+    # provides no useful functionality. Ignore.
+    'alien_invasion',
 ]
 
 
