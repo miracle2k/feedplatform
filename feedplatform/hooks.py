@@ -76,7 +76,7 @@ def add_callback(name, func, priority=0):
 
     _HOOKS[name][func] = priority
     _HOOKS[name] = dict(sorted(_HOOKS[name].iteritems(),
-                               key=lambda (k,v): (v,k),
+                               key=lambda (k,v): v,
                                reverse=True))
 
 
