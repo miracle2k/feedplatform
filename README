@@ -372,3 +372,4 @@ TODO:
       positives, as well as a performance cost.
     - support dry-run functionality (see what would happen if a feed were
       to be updated, but do not write to database).
+    - addin to use python-dateutil for more robust date support
