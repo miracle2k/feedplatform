@@ -83,7 +83,7 @@ def update_feed(feed, kwargs={}):
         # few fixed requirements that we have: we need a guid.
         # Addins can provide new ways to determine one, but if all
         # fails, we just can't handle the item.
-        guid = hooks.trigger('get_guid')
+        guid = hooks.trigger('get_guid', args=[feed, entry_dict])
         if not guid:
             guid = entry_dict.get('guid')
         if not guid:
@@ -92,7 +92,7 @@ def update_feed(feed, kwargs={}):
         if guid:
             log.debug('Feed #%d: determined item guid "%s"' % (feed.id, guid))
         else:
-            hooks.trigger('no_guid')
+            hooks.trigger('no_guid', args=[feed, entry_dict])
             log.warn('Feed #%d: unable to determine item guid' % (feed.id))
             continue
 
