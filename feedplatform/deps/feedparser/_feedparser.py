@@ -732,7 +732,9 @@ class _FeedParserMixin:
                 
         # resolve relative URIs
         if (element in self.can_be_relative_uri) and output:
-            output = self.resolveURI(output)
+            # but not for isPermaLink=False guids in rss
+            if not (element == 'id' and self.version.startswith('rss') and self.inentry and not self.guidislink):
+                output = self.resolveURI(output)
         
         # decode entities within embedded markup
         if not self.contentparams.get('base64', 0):
@@ -1346,8 +1348,6 @@ class _FeedParserMixin:
         attrsD = self._itsAnHrefDamnIt(attrsD)
         if attrsD.has_key('href'):
             attrsD['href'] = self.resolveURI(attrsD['href'])
-            if attrsD.get('rel')=='enclosure' and not context.get('id'):
-                context['id'] = attrsD.get('href')
         expectingText = self.infeed or self.inentry or self.insource
         context.setdefault('links', [])
         context['links'].append(FeedParserDict(attrsD))
