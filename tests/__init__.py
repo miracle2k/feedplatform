@@ -418,6 +418,13 @@ class MockHTTPResponse(urllib.addinfourl):
 
         self.code, self.msg = code, msg
 
+# just to be extra nice, in reality the message doesn't matter
+HTTP_RESPONSE_MSGS = {
+    200: 'OK',
+    301: 'Permanent redirect',
+    302: 'Temporary redirect',
+}
+
 class MockHTTPHandler(urllib2.BaseHandler):
     """Fake HTTP handler that serves the feeds available through a
     ``FeedEvolutionTestFramework`` instance.
@@ -447,7 +454,8 @@ class MockHTTPHandler(urllib2.BaseHandler):
             # it will be captured by nose).
             print >> sys.stderr, 'ERROR: Failed to render "%s": %s' % (url, e)
             raise
-        return MockHTTPResponse(status, 'OK', headers, content, url)
+        return MockHTTPResponse(status,
+            HTTP_RESPONSE_MSGS.get(status, 'Unknown'), headers, content, url)
 
     """def handle304Response(self, lmod, etag):
         ""
