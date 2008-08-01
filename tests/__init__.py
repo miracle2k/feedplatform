@@ -39,6 +39,8 @@ feed:
 
     * ``url``: A (fake) url for the feed. Needed, for example, for
       testing redirects.
+    * ``status``: The HTTP status code to use for the response.
+    * ``headers``: Headers to pass along with the response (as a dict).
 """
 
 import os, sys
@@ -184,8 +186,12 @@ class FeedEvolutionTestFramework(object):
                     return cls.__name__
                 elif name == 'url':
                     return u'http://feeds/%s' % cls.name
+                elif name == 'status':
+                    return 200
+                elif name == 'headers':
+                    return {}
                 else:
-                    return type.getattr(cls, name)
+                    raise AttributeError("%s" % name)
 
 
 class FeedEvolutionTest(object):
@@ -292,6 +298,10 @@ class FeedEvolutionTest(object):
         if not feed:
             raise KeyError('Unknown feed: "%s"' % key)  # KeyError = 404
 
+        # get response code and headers
+        status = feed.status
+        headers = feed.headers
+
         # Get the feed content; if it is a callable, we give it the
         # current pass number. The result may be a string representing
         # the template to use, or a 2-tuple in which the second value
@@ -370,7 +380,7 @@ class FeedEvolutionTest(object):
         if open_tags != 0:
             raise Exception('not all tags closed')
 
-        return output
+        return status, headers, output
 
 class MockHTTPMessage(httplib.HTTPMessage):
     """Encapsulates access to the (response) headers.
@@ -378,12 +388,20 @@ class MockHTTPMessage(httplib.HTTPMessage):
     Overridden to be initialized directly with a finished header
     dictionary instead of a file object that is read and parsed.
 
-    The base class then provides methods like ``getheader()```on
-    top of the dict. The feedparser library expects this, so we
-    deliver.
+    The base class then provides methods like ``getheader()``` on
+    top of the dict.
+
+    The feedparser library expects those features, so we deliver.
     """
     def __init__(self, headers):
-        self.dict = headers
+        self.dict = dict([(k.lower(), v) for k, v in headers.iteritems()])
+        # MRO goes up to ``rfc822.Message``, some of which's
+        # methods depend on self.headers (example: ``getheaders()``,
+        # which is supposed to be a *list*. Others use ``self.dict``.
+        # The base classes generate ``dict`` based on ``headers``,
+        # we do the reverse.
+        self.headers = ["%s: %s" % (k, v) for k, v in headers.iteritems()]
+
 
 class MockHTTPResponse(urllib.addinfourl):
     """Fake HTTP response that looks just like the real one, but
@@ -393,7 +411,7 @@ class MockHTTPResponse(urllib.addinfourl):
     using a string, instead of requiring a file-like object. It also adds
     the attributes required by urllib2's HTTP processing (eg.``code``).
     """
-    def __init__(self, code, msg, headers, data, url=None):
+    def __init__(self, code, msg, headers, data, url):
         if isinstance(data, basestring):
             data = StringIO.StringIO(data)
         urllib.addinfourl.__init__(self, data, MockHTTPMessage(headers), url)
@@ -422,11 +440,14 @@ class MockHTTPHandler(urllib2.BaseHandler):
     def http_open(self, req):
         url = req.get_full_url()
         try:
-            content = self.store.get_feed(url)
+            status, headers, content = self.store.get_feed(url)
         except Exception, e:
+            # Exception will be swallowed by the feedparser lib anyway,
+            # try to get some attention through a message (to stderr, or
+            # it will be captured by nose).
             print >> sys.stderr, 'ERROR: Failed to render "%s": %s' % (url, e)
-            content = ""
-        return MockHTTPResponse(200, 'OK', {}, content)
+            raise
+        return MockHTTPResponse(status, 'OK', headers, content, url)
 
     """def handle304Response(self, lmod, etag):
         ""
