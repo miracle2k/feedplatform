@@ -1,0 +1,26 @@
+#107 guid is converted to absolute link, even if isPermaLink=="false"
+
+From: melsdoerfer <michael@elsdoerfer.com>
+
+
+---
+
+ feedparser/feedparser.py |    4 +++-
+ 1 files changed, 3 insertions(+), 1 deletions(-)
+
+
+diff --git a/feedparser/feedparser.py b/feedparser/feedparser.py
+index 134637e..5b66379 100644
+--- a/feedparser/feedparser.py
++++ b/feedparser/feedparser.py
+@@ -732,7 +732,9 @@ class _FeedParserMixin:
+                 
+         # resolve relative URIs
+         if (element in self.can_be_relative_uri) and output:
+-            output = self.resolveURI(output)
++            # but not for isPermaLink=False guids in rss
++            if not (element == 'id' and self.version.startswith('rss') and self.inentry and not self.guidislink):
++                output = self.resolveURI(output)
+         
+         # decode entities within embedded markup
+         if not self.contentparams.get('base64', 0):
