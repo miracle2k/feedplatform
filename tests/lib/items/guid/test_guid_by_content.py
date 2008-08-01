@@ -22,7 +22,7 @@ class TestFeed(feedev.Feed):
             <item>
                 {% <4 %}<title>Good item with an id</title>{% end %}
                 {% 4 %}<title>Good item with a guid</title>{% end %}
-                <guid>123456</guid>
+                <guid isPermaLink="false">123456</guid>
             </item>
 
             {% 5 %}
@@ -50,12 +50,6 @@ class TestFeed(feedev.Feed):
     def pass4(feed):
         # the third item is using a guid; thus, the change is detected
         assert feed.items.count() == 4
-
-        # we also want to make sure that the <guid> element is indeed
-        # use, i.e. preferred over the content hash.
-        # TODO: fails, but also move somehwere else?
-        assert feed.items.find(db.Item.guid == u'123456').count() == 1
-
 
     def pass5(feed):
         # guids are not generated for empty content bases,

@@ -1,5 +1,6 @@
 from tests import feedev
 from feedplatform import addins
+from feedplatform import db
 
 class test_addin(addins.base):
     called = 0
@@ -12,13 +13,14 @@ class TestFeed(feedev.Feed):
     content = """
     <rss>
         <item></item>
-        <item><guid>xyz</guid></item>
+        <item><guid isPermaLink="false">xyz</guid></item>
     </rss>
     """
 
     def pass1(feed):
         # hook called only once, second item has a guid of it's own
         assert ADDINS[0].called == 1
+        assert feed.items.find(db.Item.guid == u'xyz').count() == 1        
 
 def test():
     feedev.testmod()
