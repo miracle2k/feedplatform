@@ -21,6 +21,15 @@ __all__  = (
 
 # simple method to validate names and avoid bugs due to misspellings
 SUPPORTED_HOOKS = [
+    # Called after a feed was *successfully*
+    # parsed. Gets passed the feed db object,
+    # as well as the parsed data dict.
+    # Can return False if further processing
+    # should be stopped.
+    # To collect feed-wide data, this is the
+    # right place.
+    'after_parse',
+
     # Determine item guid BEFORE the default
     # <guid> tag is chosen.
     'get_guid',

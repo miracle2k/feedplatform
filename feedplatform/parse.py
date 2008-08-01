@@ -51,9 +51,13 @@ def update_feed(feed, kwargs={}):
     """
 
     log.info('Updating feed #%d: %s' % (feed.id, feed.url))
-    feed_dict = feedparser.parse(feed.url, agent=config.USER_AGENT,
+    data_dict = feedparser.parse(feed.url, agent=config.USER_AGENT,
                                  handlers=list(config.URLLIB2_HANDLERS),
                                  **kwargs)
+
+    keep_going = hooks.trigger('after_parse', args=[feed, data_dict])
+    if keep_going == False:
+        return
 
     # The bozo feature Universal Feed Parser allow it to parse feeds
     # that are not well-formed (http://feedparser.org/docs/bozo.html).
@@ -74,10 +78,10 @@ def update_feed(feed, kwargs={}):
     # with empty or clearly erroneous data.
     #
     # We will log the problem, though.
-    if feed_dict.bozo:
-        log.warn('Feed #%d bozo: %s' % (feed.id, feed_dict.bozo_exception))
+    if data_dict.bozo:
+        log.warn('Feed #%d bozo: %s' % (feed.id, data_dict.bozo_exception))
 
-    for entry_dict in feed_dict.entries:
+    for entry_dict in data_dict.entries:
 
         # Determine a unique id for the item; this is one of the
         # few fixed requirements that we have: we need a guid.
