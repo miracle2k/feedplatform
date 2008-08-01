@@ -1,5 +1,5 @@
 from tests import feedev
-from feedplatform.db import Item
+from feedplatform import db
 from feedplatform.lib import guid_by_content
 
 ADDINS = [guid_by_content(prefix='cnt::', fields=('title', 'link'),
@@ -53,7 +53,9 @@ class TestFeed(feedev.Feed):
 
         # we also want to make sure that the <guid> element is indeed
         # use, i.e. preferred over the content hash.
-        assert feed.items.find(Item.guid == u'123456').count() == 1
+        # TODO: fails, but also move somehwere else?
+        assert feed.items.find(db.Item.guid == u'123456').count() == 1
+
 
     def pass5(feed):
         # guids are not generated for empty content bases,
