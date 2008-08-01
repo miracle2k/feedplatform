@@ -33,6 +33,12 @@ real feed contents for simplicity):
 
     def test():
         feedev.testmod()
+
+Futher, the following class attributes are supported for such a test
+feed:
+
+    * ``url``: A (fake) url for the feed. Needed, for example, for
+      testing redirects.
 """
 
 import os, sys
@@ -132,7 +138,7 @@ class FeedEvolutionTestFramework(object):
             obj = getattr(module, name)
             if isinstance(obj, type):
                if issubclass(obj, FeedEvolutionTestFramework.Feed):
-                   feeds[obj.name()] = obj
+                   feeds[obj.url] = obj
 
         # a testcase usually defines which addins it uses
         addins = getattr(module, 'ADDINS', [])
@@ -171,9 +177,16 @@ class FeedEvolutionTestFramework(object):
                         new_attrs[key] = value
                 return type.__new__(cls, name, bases, new_attrs)
 
-        @classmethod
-        def name(cls):
-            return cls.__name__
+            def __getattr__(cls, name):
+                # provide default values for attributes a test feed
+                # doesn't explicitely specify
+                if name == 'name':
+                    return cls.__name__
+                elif name == 'url':
+                    return u'http://feeds/%s' % cls.name
+                else:
+                    return type.getattr(cls, name)
+
 
 class FeedEvolutionTest(object):
     """Represents a single test case with one or many evolving feeds,
@@ -223,7 +236,7 @@ class FeedEvolutionTest(object):
         # create feed rows
         for feed in self.feeds.values():
             dbobj = db.Feed()
-            dbobj.url = u'http://feeds/%s' % feed.name()
+            dbobj.url = feed.url
             db.store.add(dbobj)
             feed.dbobj = dbobj
         db.store.flush()
@@ -259,12 +272,13 @@ class FeedEvolutionTest(object):
                         if str(e):
                             emsg = '%s (%s)' % (e, emsg)
                         raise Exception('Pass %d for "%s" failed: %s' %
-                            (self.current_pass, feed.name(), emsg))
+                            (self.current_pass, feed.name, emsg))
 
 
     tag_re = re.compile('{%(.*?)%}')
-    def get_feed(self, name):
-        """Return feed contents of ``name`` according to current pass.
+    def get_feed(self, key):
+        """Returns feed contents of ``key``, rendered for the current
+        pass.
 
         Because a test feed content may differ in different stages of
         the test, this function passes the feed content through a very
@@ -274,9 +288,9 @@ class FeedEvolutionTest(object):
         urllib2.
         """
 
-        feed = self.feeds.get(name)
+        feed = self.feeds.get(key)
         if not feed:
-            raise KeyError('Unknown feed: "%s"' % name)  # KeyError = 404
+            raise KeyError('Unknown feed: "%s"' % key)  # KeyError = 404
 
         # Get the feed content; if it is a callable, we give it the
         # current pass number. The result may be a string representing
@@ -406,11 +420,11 @@ class MockHTTPHandler(urllib2.BaseHandler):
         self.store = store
 
     def http_open(self, req):
-        name = req.get_selector()[1:]    # remove leading /
+        url = req.get_full_url()
         try:
-            content = self.store.get_feed(name)
+            content = self.store.get_feed(url)
         except Exception, e:
-            print >> sys.stderr, 'ERROR: Failed to render "%s": %s' % (name, e)
+            print >> sys.stderr, 'ERROR: Failed to render "%s": %s' % (url, e)
             content = ""
         return MockHTTPResponse(200, 'OK', {}, content)
 
