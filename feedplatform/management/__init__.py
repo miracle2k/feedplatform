@@ -89,8 +89,10 @@ class ManagementUtility(object):
         """
         usage = ['%s <subcommand> [options] [args]' % self.prog_name]
         usage.append('FeedPlatform command line tool')
+        usage.append('')
         usage.append("Type '%s help <subcommand>' for help on a specific "
             "subcommand." % self.prog_name)
+        usage.append('')
         usage.append('Available subcommands:')
         commands = get_commands().keys()
         commands.sort()
