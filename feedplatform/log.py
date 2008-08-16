@@ -5,15 +5,17 @@ within FeedPlatform.
 import sys
 import logging
 
-__all__ = ('log', 'reset')
+__all__ = ('log', 'reset', 'get')
 
 
+ROOT_NAME = 'feedplatform'
 log = None
 
 def reset():
-    """(Re)configure the default logger."""
+    """(Re)configure the default logger.
+    """
 
-    new_logger = logging.getLogger('feedplatform')
+    new_logger = logging.getLogger(ROOT_NAME)
 
     # might be an existing object, reset it
     for handler in new_logger.handlers:
@@ -29,4 +31,16 @@ def reset():
     global log
     log = new_logger
 
+# init module
 reset()
+
+
+def get(name):
+    """Get a sublogger for ``name``.
+
+    The returned logger instance will be a childlogger of your
+    library-wide main logger. Parts of the library can use this to
+    separate their log output.
+    """
+    log = logging.getLogger("%s.%s" % (ROOT_NAME, name))
+    return log

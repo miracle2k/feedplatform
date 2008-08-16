@@ -1,13 +1,15 @@
 """Addins that primarily extend on the level of the feed model.
 """
 
+from http import *
+
 def save_bandwith():
     raise NotImplementedError()
 
-def update_redirects():
+def download_cover():
     raise NotImplementedError()
 
-def download_cover():
+def download_favicon():
     raise NotImplementedError()
 
 def prioritize_parse():
