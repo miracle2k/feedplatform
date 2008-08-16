@@ -140,7 +140,7 @@ class FeedEvolutionTestFramework(object):
             obj = getattr(module, name)
             if isinstance(obj, type):
                if issubclass(obj, FeedEvolutionTestFramework.Feed):
-                   feeds[obj.url] = obj
+                   feeds[obj.name] = obj
 
         # a testcase usually defines which addins it uses
         addins = getattr(module, 'ADDINS', [])
@@ -195,8 +195,10 @@ class FeedEvolutionTestFramework(object):
 
 
 class FeedEvolutionTest(object):
-    """Represents a single test case with one or many evolving feeds,
-    i.e. a single run through multiple parsing passes.
+    """Represents a single test case exceution with one or many
+    evolving feeds, i.e. a single run through multiple parsing passes.
+
+    We use one instance of this to have it run exactly one test.
     """
 
     def __init__(self, feeds, addins, module):
@@ -266,9 +268,9 @@ class FeedEvolutionTest(object):
         for self.current_pass in range(1, self.num_passes+1):
             for feed in self.feeds.values():
                 testfunc = getattr(feed, 'pass%d'%self.current_pass, None)
+                # Try to be speedier by only parsing feeds when they
+                # actually have a handler for the current pass.
                 if testfunc:
-                    # Try to be speedier by only parsing feeds when they
-                    # actually have a handler for the current pass.
                     parse.update_feed(feed.dbobj)
 
                     try:
@@ -282,8 +284,8 @@ class FeedEvolutionTest(object):
 
 
     tag_re = re.compile('{%(.*?)%}')
-    def get_feed(self, key):
-        """Returns feed contents of ``key``, rendered for the current
+    def get_feed(self, url):
+        """Returns feed contents of ``url``, rendered for the current
         pass.
 
         Because a test feed content may differ in different stages of
@@ -294,9 +296,12 @@ class FeedEvolutionTest(object):
         urllib2.
         """
 
-        feed = self.feeds.get(key)
-        if not feed:
-            raise KeyError('Unknown feed: "%s"' % key)  # KeyError = 404
+        fs = [f for f in self.feeds.values() if f.url == url]
+        if not fs:
+            raise KeyError('No feed for "%s"' % key)  # KeyError = 404
+        # possibly multiple feeds with the same urls could exist, as
+        # is required by some tests.
+        feed = fs[0]
 
         # get response code and headers
         status = feed.status
