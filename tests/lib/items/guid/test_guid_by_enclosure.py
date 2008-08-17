@@ -1,5 +1,4 @@
 from tests import feedev
-from feedplatform.db import Item
 from feedplatform.lib import guid_by_enclosure
 
 ADDINS = [guid_by_enclosure(prefix='enc::')]

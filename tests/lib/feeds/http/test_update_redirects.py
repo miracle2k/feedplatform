@@ -2,6 +2,7 @@ from nose.tools import assert_raises
 from tests import feedev
 from feedplatform.lib import update_redirects
 from feedplatform import db
+from feedplatform.db import models
 
 ADDINS = []
 
@@ -60,12 +61,12 @@ def test_delete_self():
 
     def check(feed):
         # current feed object does no longer exist
-        assert db.store.find(db.Feed, db.Feed.id == feed.id).count() == 0
+        assert db.store.find(models.Feed, models.Feed.id == feed.id).count() == 0
 
         # there were two other feeds with the same url that we are
         # redirecting to, they both still exist (we have only deleted
         # ourselfs).
-        assert db.store.find(db.Feed, db.Feed.url == u'http://new.org/feeds/rss').count() == 2
+        assert db.store.find(models.Feed, models.Feed.url == u'http://new.org/feeds/rss').count() == 2
     PermanentlyRedirectedFeed.pass1 = staticmethod(check)
 
     feedev.testmod()
@@ -78,7 +79,7 @@ def test_delete_other():
         # url has changed
         assert feed.url == u'http://new.org/feeds/rss'
         # no other feed with that url exists
-        assert db.store.find(db.Feed, db.Feed.url == u'http://new.org/feeds/rss').count() == 1
+        assert db.store.find(models.Feed, models.Feed.url == u'http://new.org/feeds/rss').count() == 1
     PermanentlyRedirectedFeed.pass1 = staticmethod(check)
 
     feedev.testmod()

@@ -3,6 +3,9 @@
 Simply stores and makes available a list of model names that are valid,
 as well as those model's base fields (e.g. not added by addins).
 
+Note that the actual, usable model classes are available in
+``feedplatform.db``.
+
 Apart from it's role in model construction, it is mainly intended as
 a simple way to validate identifiers in places where model names are
 expected, while at the same time allowing addins to easily register

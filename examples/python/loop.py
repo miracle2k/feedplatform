@@ -3,6 +3,7 @@ from os import path
 from datetime import datetime, timedelta
 
 from feedplatform import db
+from feedplatform.db import models
 from feedplatform.conf import config
 from feedplatform import parse
 
@@ -33,9 +34,9 @@ def init_db():
 
     # create feeds that are currently missing
     for url in urls:
-        if not db.store.find(db.Feed, db.Feed.url == url).count():
+        if not db.store.find(models.Feed, models.Feed.url == url).count():
             print "Adding ", url
-            feed = db.Feed()
+            feed = models.Feed()
             feed.url = url
             db.store.add(feed)
     db.store.flush()

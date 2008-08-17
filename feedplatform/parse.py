@@ -31,7 +31,7 @@ def simple_loop(callback=None):
     do_return = lambda: callback and callback(counter)
     counter = 0
     while True:
-        feeds = db.store.find(db.Feed)
+        feeds = db.store.find(db.models.Feed)
         for feed in feeds:
             counter += 1
             update_feed(feed, {})
@@ -101,9 +101,9 @@ def update_feed(feed, kwargs={}):
             continue
 
         # does the item already exist *for this feed*?
-        items = list(db.store.find(db.Item,
-                                   db.Item.feed==feed,
-                                   db.Item.guid==guid))
+        items = list(db.store.find(db.models.Item,
+                                   db.models.Item.feed==feed,
+                                   db.models.Item.guid==guid))
         if len(items) >= 2:
             # TODO: log a warning/error
             # TODO: test for this case
@@ -115,7 +115,7 @@ def update_feed(feed, kwargs={}):
 
         if not item:
             # it doesn't, so create it
-            item = db.Item()
+            item = db.models.Item()
             item.feed = feed
             item.guid = guid
             db.store.add(item)

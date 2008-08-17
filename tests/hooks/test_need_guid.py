@@ -20,7 +20,7 @@ class TestFeed(feedev.Feed):
     def pass1(feed):
         # hook called only once, second item has a guid of it's own
         assert ADDINS[0].called == 1
-        assert feed.items.find(db.Item.guid == u'xyz').count() == 1        
+        assert feed.items.find(db.models.Item.guid == u'xyz').count() == 1
 
 def test():
     feedev.testmod()

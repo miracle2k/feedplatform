@@ -243,7 +243,7 @@ class FeedEvolutionTest(object):
 
         # create feed rows
         for feed in self.feeds.values():
-            dbobj = db.Feed()
+            dbobj = db.models.Feed()
             dbobj.url = feed.url
             db.store.add(dbobj)
             feed.dbobj = dbobj

@@ -3,7 +3,7 @@ from feedplatform import db
 
 class Command(BaseCommand):
     def handle(self, *args, **options):
-        for model in db.models.values():
+        for model in db.models:
 
             print model.__name__
 

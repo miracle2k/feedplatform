@@ -1,4 +1,4 @@
-"""When a guid has isPermaLink="false", it is not forced into an 
+"""When a guid has isPermaLink="false", it is not forced into an
 absolute URL.
 """
 
@@ -15,8 +15,8 @@ class TestFeed(feedev.Feed):
     """
 
     def pass1(feed):
-        assert feed.items.find(db.Item.guid == u'xyz').count() == 1
-        assert feed.items.find(db.Item.guid == u'http://base.com/xyz').count() == 1        
+        assert feed.items.find(db.models.Item.guid == u'xyz').count() == 1
+        assert feed.items.find(db.models.Item.guid == u'http://base.com/xyz').count() == 1
 
 def test():
     feedev.testmod()

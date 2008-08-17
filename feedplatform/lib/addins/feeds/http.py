@@ -70,7 +70,7 @@ class update_redirects(addins.base):
         if data_dict.status == 301:
             new_url = data_dict.href
             self.log.info('Feed #%d: permanent redirect to %s' % (feed.id, new_url))
-            dup_feeds = db.store.find(db.Feed, db.Feed.url == new_url)
+            dup_feeds = db.store.find(db.models.Feed, db.models.Feed.url == new_url)
 
             if dup_feeds.any():
                 return self._conflict_strategy(feed, new_url, dup_feeds)

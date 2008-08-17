@@ -4,11 +4,44 @@ Loads the configuration file as specified by the user through an
 environment variable, and merges it with the default config. Makes
 the result available for other parts of the library to use.
 
-Inspired by Django configuration file implementation.
-
-Common usage:
+To access a user's configuration, you would commonly do:
 
     from feedplatform.conf import config
+    print config.SOME_OPTION
+
+Inspired by Django's configuration file implementation. However,
+unlike Django, FeedPlatform does only require certain configuration
+values instead of requiring a configuration. In other words, you
+can get away without setting up a configuration as long as you don't
+try to use functionality that uses values without a default (e.g.
+DATABASE). In contract, Django needs a config file whenever you use
+functionality that requires access to the configuration, even if a
+default would exist.
+
+Attention: The fact that a config file usually imports
+``feedplatform.lib``, which in turn is free to use the whole of the
+feedplatform package, introduces some circular issues when code in
+the feedplatform package itself needs to refer to the config file.
+
+For example, say that some addin needs to access the services of
+``feedplatform.foo``, and ``feedplatform.foo`` needs to access config
+data to provide those services. An import stack now might look
+like this:
+
+    -> feedplatform.conf.config.SOME_VALUE is accessed
+    {user_config_file}    # lazy loaded for the first time
+    feedplatform.lib
+    feedplatform.lib.troublesome_addin
+    feedplatform.foo
+    -> accesses feedplatform.conf.config.ANOTHER_VALUE
+    {user_config_file} -> ERROR (circular import)
+
+In essence, there is only one solution: While being imported,
+``feedplatform.foo`` may in turn import ``feedplatform.conf.config``,
+but cannot use the object (i.e. access any configuration values).
+The respective code should be placed inside a function, or must be
+wrapped inside a proxy. For an example, see how ``feedplatform.db``
+exposes the models it creates based on the config.
 """
 
 import os, sys
