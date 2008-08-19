@@ -260,10 +260,10 @@ class FeedEvolutionTest(object):
         considered failed.
         """
 
-        self._initdb()
-
         config.ADDINS = self.addins
         addins.reinstall()
+
+        self._initdb()
 
         for self.current_pass in range(1, self.num_passes+1):
             for feed in self.feeds.values():

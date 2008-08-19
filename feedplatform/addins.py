@@ -13,6 +13,7 @@ call reinstall() if you changed ADDINS afterwards.
 
 import types
 from feedplatform import hooks
+from feedplatform import db
 
 
 __all__ = ('base', 'install', 'reinstall')
@@ -59,7 +60,8 @@ def install(addins=None):
     ``addins`.
 
     The addin installation process consists mainly if letting each
-    adding register it's hook callbacks.
+    adding register it's hook callbacks, as well as rebuilding the
+    models.
 
     Addins that were previously installed will automatically be
     removed.
@@ -76,6 +78,8 @@ def install(addins=None):
     hooks.reset()
     for addin in addins:
         addin.setup()
+
+    db.reconfigure()
 
 # at least for now, those are the same
 reinstall = install
