@@ -2,7 +2,7 @@
 """
 
 import datetime
-import timegm
+import calendar
 
 
 def struct_to_datetime(structt):
