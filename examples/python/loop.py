@@ -23,12 +23,16 @@ urls = [
 ]
 
 def init_config():
-    config.DATABASE = 'sqlite:%s' % dbfile
+    from feedplatform.lib import collect_feed_data
+    config.configure(**{
+        'DATABASE': 'sqlite:%s' % dbfile,
+        'ADDINS': [collect_feed_data('title'),]
+    })
 
 def init_db():
     # if the database is new, create the tables
     if not os.path.exists(dbfile):
-        db.store.execute("CREATE TABLE feed (id INTEGER PRIMARY KEY, url VARCHAR)")
+        db.store.execute("CREATE TABLE feed (id INTEGER PRIMARY KEY, url VARCHAR, title VARCHAR)")
         db.store.execute("CREATE TABLE item (id INTEGER PRIMARY KEY, feed_id INTEGER, guid VARCHAR)")
         db.store.commit()
 
