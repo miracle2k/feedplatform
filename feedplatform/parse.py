@@ -32,7 +32,8 @@ def simple_loop(callback=None):
     counter = 0
     while True:
         feeds = db.store.find(db.models.Feed)
-        for feed in feeds:
+        for i in xrange(0, feeds.count()):  # XXX: only do this in sqlite
+            feed = feeds[i]
             counter += 1
             update_feed(feed, {})
             if do_return():

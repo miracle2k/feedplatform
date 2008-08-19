@@ -8,6 +8,8 @@ hooks, and addins that register the callbacks.
 
 It is possible for addins to register their own hooks to make available
 in turn to other addins.
+
+# TODO: the list of hooks needs to be updated with more info.
 """
 
 
@@ -21,13 +23,16 @@ __all__  = (
 
 # simple method to validate names and avoid bugs due to misspellings
 SUPPORTED_HOOKS = [
-    # Called after a feed was *successfully*
-    # parsed. Gets passed the feed db object,
-    # as well as the parsed data dict.
+    # Called after a feed was successfully
+    # retrieved and parsed, though note that it
+    # still may be bozo. Gets passed the feed
+    # db object, as well as the parsed data dict.
     # Can return False if further processing
     # should be stopped.
     # To collect feed-wide data, this is the
-    # right place.
+    # right place. TODO: or is this better
+    # done in 'feed_valid'? depends on how
+    # error handling is going to work.
     'after_parse',
 
     # Determine item guid BEFORE the default
