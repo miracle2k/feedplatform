@@ -5,6 +5,7 @@ The Storm ORM is used as the backend.
 """
 
 import sys
+import copy
 
 from storm.locals import Store, create_database, Storm
 
@@ -65,8 +66,9 @@ class ModelsProxy(types.ModuleType):
     """
 
     def __init__(self):
-        # TODO: a simple dict would do to? from db.models import Feed
-        # doesn't work anyway...
+        # TODO: a simple dict baseclass would do to? from db.models
+        # import Feed doesn't work anyway, which was the original idea
+        # behind subclassing ModuleType.
         super(ModelsProxy, self).__init__('models')
 
     def __getattr__(self, name):
@@ -80,13 +82,21 @@ class ModelsProxy(types.ModuleType):
         self._construct_models()
         return self._models.itervalues()
 
+    def iternames(self):
+        self._construct_models()
+        return self._models.iterkeys()
+
+    def iteritems(self):
+        self._construct_models()
+        return self._models.iteritems()
+
     def _construct_models(self):
         # only do this once
         if '_models' in self.__dict__:
             return
 
         # collect fields for all the models
-        blueprints = AVAILABLE_MODELS.copy()
+        blueprints = copy.deepcopy(AVAILABLE_MODELS)
         for addin in config.ADDINS:
             if hasattr(addin, 'get_columns'):
                 for table, new_fields in addin.get_columns().items():

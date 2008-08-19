@@ -54,6 +54,8 @@ import httplib
 # cStringIO is not subclassable and doesn't allow attribute assignment
 import StringIO
 
+from storm import variables as stormvars
+
 from feedplatform.conf import config
 from feedplatform import parse
 from feedplatform import db
@@ -222,9 +224,9 @@ class FeedEvolutionTest(object):
     def _initdb(self):
         """Reset and reinitialize the database for this test.
 
-        This also creates the feeds as rows in the database, and assigns
-        the a *database feed object* to each *test feed definition/class*,
-        i.e.
+        This also creates the feeds as rows in the database, and
+        assigns the a **database feed object** to each **test feed
+        definition/class**, i.e.
 
             feed.dbobj for feed in self.feeds
         """
@@ -237,9 +239,29 @@ class FeedEvolutionTest(object):
         for row in result.get_all():
             db.store.execute('DROP TABLE "%s"' % row[0])
 
-        # recreate tables (TODO: this needs to be dynamic!)
-        db.store.execute("CREATE TABLE feed (id INTEGER PRIMARY KEY, url VARCHAR)")
-        db.store.execute("CREATE TABLE item (id INTEGER PRIMARY KEY, feed_id INTEGER, guid VARCHAR)")
+        # recreate tables - since storm can't do schema creation, we
+        # have to implement this in a very basic version ourselfs.
+        for model_name, model in db.models.iteritems():
+            field_sql = []
+            # TODO: all this is untested with model inheritance
+            for field in model._storm_columns:
+                field_name = field._detect_attr_name(model)  # field._name is None?
+                modifers = field._primary and 'PRIMARY KEY' or ''
+                try:
+                    ctype = {stormvars.IntVariable: 'INTEGER',
+                             stormvars.UnicodeVariable: 'VARCHAR',
+                             stormvars.DateTimeVariable: 'TIMESTAMP',
+                                }[field._variable_class]
+                except KeyError:
+                    raise TypeError(('Cannot build %s table, unknow field '
+                        'type %s of %s. You probably want to extend the '
+                        'test framework''s schema builder to support this '
+                        'type.') % (model_name, field, field_name))
+                field_sql.append("%s %s %s" % (field_name, ctype, modifers))
+
+            create_stmt = 'CREATE TABLE %s (%s)' % (
+                model_name.lower(), ", ".join(field_sql))
+            db.store.execute(create_stmt)
 
         # create feed rows
         for feed in self.feeds.values():
