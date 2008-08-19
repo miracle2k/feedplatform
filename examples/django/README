@@ -1,0 +1,9 @@
+Django integration sample
+-------------------------
+
+View/Template-wise, there isn't all that much to see, but try:
+
+    $ ./manage.py feedplatform
+
+for controlling feedplatform, and see ``feeds.settings`` for
+how the integration was setup.
