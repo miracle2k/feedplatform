@@ -88,12 +88,11 @@ class ModelsProxy(types.ModuleType):
         # collect fields for all the models
         blueprints = AVAILABLE_MODELS.copy()
         for addin in config.ADDINS:
-            # TODO: this is not working right yet
             if hasattr(addin, 'get_columns'):
-                for name, new_fields in addin.get_columns():
+                for table, new_fields in addin.get_columns().items():
                     if not table in AVAILABLE_MODELS:
                         raise ValueError('"%s" is not a valid model name' % table)
-                    blueprints[addin].update(new_fields)
+                    blueprints[table].update(new_fields)
 
         # "Unregister" current models from storm - otherwise we'll see stuff
         # like "PropertyPathError: Path 'feed_id' matches multiple properties".
@@ -111,9 +110,8 @@ class ModelsProxy(types.ModuleType):
                 attrs[field_name] = field_value
 
             model = type(model_name, (Storm,), attrs)
-
-            # make available on module level
             new_models[model_name] = model
+
         self._models = new_models
 
 
