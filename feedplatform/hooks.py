@@ -25,8 +25,9 @@ __all__  = (
 SUPPORTED_HOOKS = [
     # Called before a feed is downloaded and
     # parsed. Gets passed the feed db object
-    # and the url. Can cause the feed to be
-    # skipped. Can modify the feedparser
+    # and a parser argument dict. Can return
+    # True if further processing should be
+    # stopped. Can modify the feedparser
     # arguments.
     'before_parse',
 
@@ -34,7 +35,7 @@ SUPPORTED_HOOKS = [
     # retrieved and parsed, though note that it
     # still may be bozo. Gets passed the feed
     # db object, as well as the parsed data dict.
-    # Can return False if further processing
+    # Can return True if further processing
     # should be stopped.
     # To collect feed-wide data, this is the
     # right place. TODO: or is this better
@@ -66,6 +67,15 @@ SUPPORTED_HOOKS = [
     # both ``get_item`` and the default code
     # failed.
     'need_item',
+
+    #
+    'found_item'
+
+    'new_item',
+
+    'before_new_item', # reverse, use afteR?
+
+    'item',
 
     # Dummy test hook. Never actually called,
     # provides no useful functionality. Ignore.
