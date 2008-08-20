@@ -91,10 +91,16 @@ def update_feed(feed):
     #
     # We will log the problem, though.
     if data_dict.bozo:
+        # TODO: add a hook here
         log.warn('Feed #%d bozo: %s' % (feed.id, data_dict.bozo_exception))
 
+    # TODO: 'feed', 'handle_feed'/'while_feed'/'do_feed'
+
+    # ACTION: HANDLE ITEMS
     for entry_dict in data_dict.entries:
 
+        # ACTION: DETERMINE GUID; HOOKS: GET_GUID, NEED_GUID
+        #
         # Determine a unique id for the item; this is one of the
         # few fixed requirements that we have: we need a guid.
         # Addins can provide new ways to determine one, but if all
@@ -105,25 +111,42 @@ def update_feed(feed):
         if not guid:
             guid = hooks.trigger('need_guid', args=[feed, entry_dict])
 
-        if guid:
-            log.debug('Feed #%d: determined item guid "%s"' % (feed.id, guid))
-        else:
+        # HOOK: NO_GUID
+        if not guid:
             hooks.trigger('no_guid', args=[feed, entry_dict])
             log.warn('Feed #%d: unable to determine item guid' % (feed.id))
             continue
-
-        # does the item already exist *for this feed*?
-        items = list(db.store.find(db.models.Item,
-                                   db.models.Item.feed==feed,
-                                   db.models.Item.guid==guid))
-        if len(items) >= 2:
-            # TODO: log a warning/error
-            # TODO: test for this case
-            return
-        elif items:
-            item = items[0]
         else:
-            item = None
+            log.debug('Feed #%d: determined item guid "%s"' % (feed.id, guid))
+
+
+        # ACTION: RESOLVE GUID TO ITEM; HOOKS: GET_ITEM, NEED_ITEM
+        #
+        # XXX: we need more extensive testing here, with all the variants
+        # of returning items, return false etc. involved.
+        #
+        # Note how each hook result is passed through get_one, since a
+        # possible issue when resolving a guid is that for whatever
+        # reason the database may contain multiple matching rows. This
+        # is a error, and we handle it here for both our default query
+        # as well as results delievered via a hook (the latter means
+        # that addins don't have to care about this situation
+        # themselves).
+        try:
+            item = db.get_one(hooks.trigger('get_item',
+                                            args=[feed, entry_dict, guid]))
+            if item is None:
+                # does the item already exist for *this feed*?
+                item = db.get_one((db.store.find(db.models.Item,
+                                                 db.models.Item.feed==feed,
+                                                 db.models.Item.guid==guid)))
+            if item is None:
+                item = db.get_one(hooks.trigger('need_item',
+                                                args=[feed, entry_dict, guid]))
+        except db.MultipleObjectsReturned:
+               # TODO: log a warning/error, provide a hook
+               # TODO: test for this case
+               return
 
         if not item:
             # it doesn't, so create it
@@ -133,5 +156,7 @@ def update_feed(feed):
             db.store.add(item)
             db.store.flush()
             log.info('Feed #%d: found new item (#%d)' % (feed.id, item.id))
+
+        # TODO: flush item?
 
     db.store.commit()

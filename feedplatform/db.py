@@ -8,12 +8,47 @@ import sys
 import copy
 
 from storm.locals import Store, create_database, Storm
+from storm.store import ResultSet as StormResultSet
 
 from feedplatform.models import AVAILABLE as AVAILABLE_MODELS
 from feedplatform.conf import config
 
 
-__all__ = ('store', 'database', 'models')
+__all__ = ('store', 'database', 'models',
+           'MultipleObjectsReturned', 'get_one')
+
+
+class MultipleObjectsReturned(Exception):
+    pass
+
+def get_one(result):
+    """Expect exactly one or zero row in ``result`` and return it,
+    fail on multiple rows.
+
+    Storm appears to be lacking a ``get()`` method that retrieves
+    an object and enforces exactly one result, as known from the
+    Django ORM.
+
+    This helper method intends to implement this behaviour. The
+    main difference is that we do not raise an exception if no
+    results are available, but instead return None.
+
+    ``result`` should be a list, a Storm resultset, or a single
+    object.
+
+    # TODO: needs testing
+    """
+    if isinstance(result, StormResultSet):
+        result = list(result)
+    if isinstance(result, list):
+        if len(result) >= 2:
+           raise MultipleObjectsReturned()
+        elif result:
+           return result[0]
+        else:
+            return None
+    else:
+        return result
 
 
 # dynamically constructed during module setup
