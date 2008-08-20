@@ -23,6 +23,13 @@ __all__  = (
 
 # simple method to validate names and avoid bugs due to misspellings
 SUPPORTED_HOOKS = [
+    # Called before a feed is downloaded and
+    # parsed. Gets passed the feed db object
+    # and the url. Can cause the feed to be
+    # skipped. Can modify the feedparser
+    # arguments.
+    'before_parse',
+
     # Called after a feed was successfully
     # retrieved and parsed, though note that it
     # still may be bozo. Gets passed the feed

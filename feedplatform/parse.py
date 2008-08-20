@@ -42,7 +42,7 @@ def simple_loop(callback=None):
             return
 
 
-def update_feed(feed, kwargs={}):
+def update_feed(feed):
     """Parse and update a single feed, as specified by the instance
     of the ``Feed`` model in ``feed``.
 
@@ -51,13 +51,24 @@ def update_feed(feed, kwargs={}):
     to the rest of the world.
     """
 
-    log.info('Updating feed #%d: %s' % (feed.id, feed.url))
-    data_dict = feedparser.parse(feed.url, agent=config.USER_AGENT,
-                                 handlers=list(config.URLLIB2_HANDLERS),
-                                 **kwargs)
+    # HOOK: BEFORE_PARSE
+    parser_args = {
+        'agent': config.USER_AGENT,
+        'handlers': list(config.URLLIB2_HANDLERS),
+    }
+    stop = hooks.trigger('before_parse', args=[feed, parser_args])
+    if stop:
+        log.info('Feed #%d skipped by addin' % (feed.id))
+        return
 
-    keep_going = hooks.trigger('after_parse', args=[feed, data_dict])
-    if keep_going == False:
+    # ACTION: PARSE FEED
+    log.info('Updating feed #%d: %s' % (feed.id, feed.url))
+    data_dict = feedparser.parse(feed.url, **parser_args)
+
+    # HOOK: AFTER_PARSE
+    stop = hooks.trigger('after_parse', args=[feed, data_dict])
+    if stop:
+        log.info('Feed #%d: Futher processing skipped by addin' % (feed.id))
         return
 
     # The bozo feature Universal Feed Parser allow it to parse feeds

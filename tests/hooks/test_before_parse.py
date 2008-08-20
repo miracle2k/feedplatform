@@ -3,7 +3,10 @@ from feedplatform import addins
 
 class test_addin(addins.base):
     called = 0
-    def on_after_parse(self, feed, data_dict):
+    # TODO: custom parser args not tested right now, but this is
+    # difficult to do without getting to much into specifics of a
+    # certain piece of functionality.
+    def on_before_parse(self, feed, parser_args):
         self.__class__.called += 1
         return True  # skip
 
