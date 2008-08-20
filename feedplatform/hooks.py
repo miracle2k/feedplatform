@@ -119,16 +119,16 @@ def trigger(name, args=[], kwargs={}, all=False):
     """Run call the callbacks registered by the hook with the given
     arguments.
 
-    By the default, once any of the callbacks returns a True value,
-    further processing will stop. Set ``all`` to True to ensure that
-    all callbacks will run.
+    By the default, once any of the callbacks returns a non-None
+    value, further processing will stop. Set ``all`` to True to
+    ensure that all callbacks will run.
     """
 
     _validate_hook_name(name)
 
     for func, priority in _HOOKS.get(name, {}).iteritems():
         result = func(*args, **kwargs)
-        if result and not all:
+        if result is not None and not all:
             return result
 
 
