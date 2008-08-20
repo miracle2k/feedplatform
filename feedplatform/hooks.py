@@ -39,8 +39,9 @@ SUPPORTED_HOOKS = [
     # should be stopped.
     # To collect feed-wide data, this is the
     # right place. TODO: or is this better
-    # done in 'feed_valid'? depends on how
-    # error handling is going to work.
+    # done in a separate hook (say 'feed',
+    # 'handle_feed'/'while_feed'/'do_feed', 'process_feed'?
+    # depends on how error handling is going to work.
     'after_parse',
 
     # Determine item guid BEFORE the default
@@ -68,14 +69,53 @@ SUPPORTED_HOOKS = [
     # failed.
     'need_item',
 
-    #
-    'found_item'
+    # A new item was found in a feed, and now
+    # needs to be initialized. This allows to
+    # customize instantiation of the Item model,
+    # e.g. by using a subclass.
+    # Note that you are fully responsible of
+    # initializing the instance, e.g. hooking
+    # it up to the parent feed, and setting
+    # the guid.
+    'create_item',
 
+    # Follows 'create_item' after a new item was
+    # found in a feed, but the Item instance is
+    # created already (though not yet flushed).
+    # See also found_item, which is usually
+    # combined with this to update item metadata.
     'new_item',
 
-    'before_new_item', # reverse, use afteR?
+    # Basically the opposing hook to new_item.
+    # This gets called if an item in a feed was
+    # detected to be already in the database.
+    # Usually combined with new_item to update
+    # item metadata.
+    'found_item',
 
-    'item',
+    # Called when an item is processed, both for
+    # new and existing items. The ``created``
+    # argument let's you distinguish.
+    # Note the difference between this an
+    # new_item/found_item, and the reason the latter
+    # two exist: in new_item, the item does not yet
+    # have a primary key, but it does here. If
+    # you need a primary key, for example for
+    # associating information in a separate model,
+    # and put your code into new_item instead, you
+    # would cause an implicit flush() for the item,
+    # which in combination with other addins following
+    # that change the instance too could lead two two
+    # flushes()/two queries, instead of only one:
+    #       unflushed item
+    #       process_item hook causes implicit flush() -> query!
+    #       process_item hook changes item
+    #       default flush() on changed item           -> query!
+    # XXX: Test this situation.
+    #
+    # The lowdown: If you don't need a primary key,
+    # hook into new_item/found_item instead.
+    'process_item',
 
     # Dummy test hook. Never actually called,
     # provides no useful functionality. Ignore.

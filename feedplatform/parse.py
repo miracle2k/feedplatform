@@ -47,8 +47,8 @@ def update_feed(feed):
     of the ``Feed`` model in ``feed``.
 
     This is the one, main, most important core function, at the
-    epicenter of the package, providing thousands of different hooks
-    to the rest of the world.
+    epicenter of the package, providing different hooks to the rest
+    of the world.
     """
 
     # HOOK: BEFORE_PARSE
@@ -93,8 +93,6 @@ def update_feed(feed):
     if data_dict.bozo:
         # TODO: add a hook here
         log.warn('Feed #%d bozo: %s' % (feed.id, data_dict.bozo_exception))
-
-    # TODO: 'feed', 'handle_feed'/'while_feed'/'do_feed'
 
     # ACTION: HANDLE ITEMS
     for entry_dict in data_dict.entries:
@@ -148,15 +146,37 @@ def update_feed(feed):
                # TODO: test for this case
                return
 
+
         if not item:
-            # it doesn't, so create it
-            item = db.models.Item()
-            item.feed = feed
-            item.guid = guid
+            # HOOK: BEFORE_NEW_ITEM
+            item = hooks.trigger('create_item', args=[feed, entry_dict, guid])
+            if not item:
+                item = db.models.Item()
+                item.feed = feed
+                item.guid = guid
+
             db.store.add(item)
+            # HOOK: NEW_ITEM
+            #
+            # Note how this happens before flushing(), so that any
+            # changes made by this hook will go into the initial
+            # INSERT query. If you need an existing primary key, use
+            # the process_item hook instead.
+            hooks.trigger('new_item', args=[item, entry_dict])
+
             db.store.flush()
             log.info('Feed #%d: found new item (#%d)' % (feed.id, item.id))
+            item_created = True
+        else:
+            # HOOK: FOUND_ITEM
+            hooks.trigger('found_item', args=[item, entry_dict])
+            item_created = False
 
-        # TODO: flush item?
+        # HOOK: PROCESS_ITEM
+        hooks.trigger('process_item', args=[item, entry_dict, item_created])
 
+        # flush once for each item
+        db.store.flush()
+
+    # commit once for each feed
     db.store.commit()
