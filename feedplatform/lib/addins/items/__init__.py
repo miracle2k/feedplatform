@@ -2,9 +2,7 @@
 """
 
 from guid import *
+from collect_item_data import *
 
 def store_enclosures():
-    raise NotImplementedError()
-
-def store_item_data():
     raise NotImplementedError()

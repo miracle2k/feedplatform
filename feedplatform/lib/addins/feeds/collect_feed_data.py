@@ -25,7 +25,48 @@ __all__ = (
 )
 
 
-class collect_feed_data(addins.base):
+class _base_data_collector(addins.base):
+    """Baseclass for both item and feed-level data collector addins.
+    """
+
+    # provide in subclass
+    model_name = None
+    standard_fields = None
+    date_fields = None
+
+    def __init__(self, *args, **kwargs):
+        self.fields = {}
+        for name in args:
+            try:
+                f = self.standard_fields[name]
+            except KeyError:
+                raise ValueError('unknown standard field "%s"' % name)
+            self.fields[name] = f
+
+        # only do this now so that defaults from *args are
+        # overwritten by kwargs; even though the situation
+        # makes hardly sense, this is the best way to resolve
+        # it, short of maybe raising an exception.
+        self.fields.update(kwargs)
+
+    def get_columns(self):
+        return {self.model_name: self.fields}
+
+    def _process(self, obj, source_dict):
+        """Call this in your respective subclass hook callback.
+        """
+        for field in self.fields:
+            # dates need to be converted to datetime
+            if field in self.date_fields:
+                source_field = "%s_parsed" % field
+                new_value = struct_to_datetime(source_dict.get(source_field))
+            else:
+                new_value = source_dict.get(field)
+
+            setattr(obj, field, new_value)
+
+
+class collect_feed_data(_base_data_collector):
     """Collect feed-level meta data (as in: not item-specific), and
     store it in the database.
 
@@ -53,41 +94,17 @@ class collect_feed_data(addins.base):
         http://www.feedparser.org/docs/content-normalization.html
     """
 
-    def __init__(self, *args, **kwargs):
-        self.fields = {}
-        for name in args:
-            try:
-                f = {'title': (Unicode, (), {}),
-                     'subtitle': (Unicode, (), {}),
-                     'summary': (Unicode, (), {}),
-                     'language': (Unicode, (), {}),
-                     'updated': (DateTime, (), {}),
-                     'published': (DateTime, (), {})}[name]
-            except KeyError:
-                raise ValueError('unknown standard field "%s"' % name)
-            self.fields[name] = f
-
-        # only do this now so that defaults from *args are
-        # overwritten by kwargs; even though the situation
-        # makes hardly sense, this is the best way to resolve
-        # it, short of maybe raising an exception.
-        self.fields.update(kwargs)
-
-    def get_columns(self):
-        return {'feed': self.fields}
+    model_name = 'feed'
+    standard_fields = {
+        'title': (Unicode, (), {}),
+        'subtitle': (Unicode, (), {}),
+        'summary': (Unicode, (), {}),
+        'language': (Unicode, (), {}),
+        'updated': (DateTime, (), {}),
+        'published': (DateTime, (), {}),
+    }
+    date_fields = ('published', 'updated',)
 
     def on_after_parse(self, feed, data_dict):
         if not data_dict.bozo:
-            feed_dict = data_dict.feed
-            for field in self.fields:
-                # dates need to be converted to datetime
-                if field in ('published', 'updated'):
-                    source_field = {
-                        'published': 'published_parsed',
-                        'updated': 'updated_parsed',
-                    }.get(field)
-                    new_value = struct_to_datetime(feed_dict.get(source_field))
-                else:
-                    new_value = feed_dict.get(field)
-
-                setattr(feed, field, new_value)
+            return self._process(feed, data_dict.feed)

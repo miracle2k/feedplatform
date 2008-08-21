@@ -152,6 +152,7 @@ Then, the following addins are waiting for you to use them. For now,
 see the docstrings in the source code of each for more information.
 
     * collect_feed_data
+    * collect_item_data
     * update_redirects
     * guid_by_content
     * guid_by_enclosure
