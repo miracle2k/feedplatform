@@ -42,8 +42,6 @@ class update_redirects(addins.base):
     """
 
     def __init__(self, delete=None, force=None, ignore=None):
-        self.log = log.get('lib.update_redirects')
-
         if delete:
             if not delete in ['self', 'other']:
                 raise ValueError('"%s" is not a valid value for "delete". '

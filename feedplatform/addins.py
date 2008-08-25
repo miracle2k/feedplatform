@@ -14,6 +14,7 @@ call reinstall() if you changed ADDINS afterwards.
 import types
 from feedplatform import hooks
 from feedplatform import db
+from feedplatform import log
 
 
 __all__ = ('base', 'install', 'reinstall')
@@ -53,6 +54,17 @@ class base(object):
                         raise RuntimeError(('%s: failed to initialize '
                             'because %s method does not refer to a valid '
                             'hook (%s).') % (self.__class__, name, e))
+
+    @property
+    def log(self):
+        """Provide a logger namespace for each addin, accessible
+        via ``self.log``.
+
+        This is lazy, e.g. the logger is created only when accessed.
+        """
+        if not hasattr(self, '_log'):
+            self._log = log.get('lib.%s' % self.__class__.__name__)
+        return self._log
 
 
 def install(addins=None):
