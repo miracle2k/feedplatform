@@ -7,10 +7,9 @@ The Storm ORM is used as the backend.
 import sys
 import copy
 
-from storm.locals import Store, create_database, Storm
+from storm.locals import *
 from storm.store import ResultSet as StormResultSet
 
-from feedplatform.models import AVAILABLE as AVAILABLE_MODELS
 from feedplatform.conf import config
 
 
@@ -88,6 +87,25 @@ class DatabaseProxy(object):
         return setattr(self.obj, name, value)
 
 
+# Note how all columns are given as a tuple to be generated dynamically.
+# For some types like ``Reference`` this is quite important, since the
+# instance itself hooks up with the models it is used with - links that
+# would survive model re-generation, and lead to quite cryptic errors.
+BASE_MODELS = {
+    'feed': {
+        'id': (Int, (), {'primary': True}),
+        'url': (Unicode, (), {}),
+        'items': (ReferenceSet, ('Feed.id', 'Item.feed_id',), {}),
+    },
+    'item': {
+        'id': (Int, (), {'primary': True}),
+        'feed_id': (Int, (), {}),
+        'feed': (Reference, ('feed_id', 'Feed.id',), {}),
+        'guid': (Unicode, (), {}),
+    },
+}
+
+
 import types
 
 class ModelsProxy(types.ModuleType):
@@ -131,12 +149,12 @@ class ModelsProxy(types.ModuleType):
             return
 
         # collect fields for all the models
-        blueprints = copy.deepcopy(AVAILABLE_MODELS)
+        blueprints = copy.deepcopy(BASE_MODELS)
         for addin in config.ADDINS:
             if hasattr(addin, 'get_columns'):
                 for table, new_fields in addin.get_columns().items():
-                    if not table in AVAILABLE_MODELS:
-                        raise ValueError('"%s" is not a valid model name' % table)
+                    if not table in blueprints:
+                        blueprints[table] = {}
                     blueprints[table].update(new_fields)
 
         # "Unregister" current models from storm - otherwise we'll see stuff
