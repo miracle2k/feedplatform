@@ -11,7 +11,7 @@ __all__ = ('log', 'reset', 'get')
 ROOT_NAME = 'feedplatform'
 log = None
 
-def reset():
+def reset(level=logging.INFO):
     """(Re)configure the default logger.
     """
 
@@ -25,7 +25,7 @@ def reset():
 
     # configure
     new_logger.addHandler(logging.StreamHandler(sys.stdout))
-    new_logger.level = logging.INFO
+    new_logger.level = level
 
     # use
     global log

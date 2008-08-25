@@ -46,6 +46,7 @@ feed:
 import os, sys
 import re
 import types
+import logging
 import operator
 import inspect
 import urllib, urllib2
@@ -123,7 +124,7 @@ class FeedEvolutionTestFramework(object):
         # By this time the nose testrunner as redirected stdout. Reset
         # the log (it might still point to the real stdout) to make sure
         # that any messages will indeed be captured by nose.
-        log.reset()
+        log.reset(level=logging.DEBUG)
 
         # If no explicit module was passed, try to find the caller's
         # module by inspecting the stack.
