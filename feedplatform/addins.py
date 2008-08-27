@@ -1,14 +1,27 @@
-"""TODO: Addins are the
+"""Addins are the primary way of extending FeedPlatform the add
+additional aggregator functionality.
 
-you'll find a number of them in feedplatform.lib
+You'll find a number of them in the builtin ``feedplatform.lib``
+module, although custom addins can easily be created, and
+generally, when extended or specialized customization is required,
+creating an addin will be a common thing to do.
 
-custom addins can easily be created.
+Addins require an installation process to register their hooks and
+other modifiers, so that addins can be loaded and reloaded at any
+time - currently this process happens when the configuration file is
+loaded. If you change the list of addins at any point afterwards,
+use ``reinstall()`` to put it into effect.
 
-addins require an installation process to register their hooks, this
-currently happens whem the config is loaded.
-
-call reinstall() if you changed ADDINS afterwards.
-
+It is recommended that addins subclass ``base``, though it is not
+required and an addin may in fact be any object that features a
+``setup`` method. Addins can also specify a tuple attribute
+``depends``, referring to other addin classes that are required
+for an addin to function, too. If the user hasn't specified those
+addins, they will be added implicitely, so long their constructor
+allows parameterless instantiation. Otherwise, an error would be
+raised, asking the user to manually add the dependency.
+Currentl, the ``depends`` tuple may refer to the other addins only
+via a class reference.
 """
 
 import types
@@ -31,6 +44,8 @@ class base(object):
           with 'on_*' - e.g. 'on_get_guid'.
           An exception will be raised if the name after 'on_' does not
           refer to a valid hook.
+
+        * self.log provides a namespaced Python logging facility.
     """
 
     def setup(self):
