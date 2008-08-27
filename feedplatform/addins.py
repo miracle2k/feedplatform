@@ -20,15 +20,17 @@ for an addin to function, too. If the user hasn't specified those
 addins, they will be added implicitely, so long their constructor
 allows parameterless instantiation. Otherwise, an error would be
 raised, asking the user to manually add the dependency.
-Currentl, the ``depends`` tuple may refer to the other addins only
+Currently, the ``depends`` tuple may refer to the other addins only
 via a class reference.
 """
 
 import types
 import inspect
+from copy import copy
 from feedplatform import hooks
 from feedplatform import db
 from feedplatform import log
+from feedplatform.conf import config
 
 
 __all__ = ('base', 'install', 'reinstall')
@@ -83,6 +85,30 @@ class base(object):
         return self._log
 
 
+def _make_addin(addin):
+    """Normalizes addin's given by the user - makes sure an instance
+    is returned.
+
+    If ``addin`` is a class, an instance is created, if possible.
+    Otherwise, an error is raised, or ``addin`` is returned unmodified.
+    """
+    if isinstance(addin, type):
+        if not addin.__init__ is object.__init__: # won't work with getargspec
+            args, _, _, defaults = inspect.getargspec(addin.__init__)
+            # for method types, the first argument will be the
+            # self-pointer, which we know will get filled, so we
+            # may ignore it.
+            if isinstance(addin.__init__, types.MethodType) and args:
+                args = args[1:]
+
+            if (not defaults and args) or (defaults and len(args) != len(defaults)):
+                raise ValueError('The addin "%s" was given as a class, '
+                    'rather than an instance, but requires arguments '
+                    'to be constructed.' % addin.__name__)
+
+        addin = addin()
+    return addin
+
 def install(addins=None):
     """Install the addins specified by the configuration, or via
     ``addins`.
@@ -93,32 +119,60 @@ def install(addins=None):
 
     Addins that were previously installed will automatically be
     removed.
+
+    The function returns the list of addins installed. It may
+    differ from the explicitly specified list due to dependencies,
+    and will contain only addin instances, not classes.
     """
 
-    # Don't clutter global namespace; we can't use __all__ here;
-    # also, config would likely lead to recursive imports.
-    from feedplatform.conf import config
-    from feedplatform import hooks
-
     if addins is None:
-        addins = config.ADDINS
+        addins = copy(config.ADDINS)
 
-    hooks.reset()
+    # Start by making sure all addins are available as instances,
+    # and use a separate list that we may modify going further.
+    # Note that by starting with an initial list of all specified
+    # addins, dependency order is not enforced for those. E.g. if
+    # ``b`` depends on ``a`, but the user puts ``b`` before ``a``,
+    # then that will be accepted by this installation process. In
+    # contrast, if he only specifies ``b``, the ``a`` dependency
+    # would automatically be inserted before it.
+    to_be_setup = []
     for addin in addins:
-        if isinstance(addin, type):
-            # a class name was specified, check that we can
-            # auto-create an instance.
-            if not addin.__init__ is object.__init__: # won't work with getargspec
-                args, _, _, defaults = inspect.getargspec(addin.__init__)
-                if (not defaults and args) or (len(args) != len(defaults)):
-                    raise ValueError('The addin "%s" was given as a class, '
-                        'rather than an instance, but requires arguments '
-                        'to be constructed.' % addin.__name__)
+        to_be_setup.append(_make_addin(addin))
 
-            addin = addin()
+    # resolve dependencies
+    for i in range(0, len(to_be_setup)):
+        def resolve_dependencies(addin, index):
+            dependencies = getattr(addin, 'depends', ())
+            for dependency in dependencies:
+                exists = False
+                # Check if the dependency is already installed. Note
+                # that dependencies may be both classes and instances.
+                for existing in to_be_setup:
+                    if not isinstance(dependency, type):
+                        if isinstance(existing, type(dependency)):
+                            exists = True
+                    elif isinstance(existing, dependency):
+                        exists = True
+
+                # if not, insert it at the right position, and
+                # recursively resolve it's own dependencies.
+                if not exists:
+                    dependency = _make_addin(dependency)
+                    to_be_setup.insert(index, dependency)
+                    index = resolve_dependencies(dependency, index)
+                    index += 1
+            return index
+
+        i = resolve_dependencies(to_be_setup[i], i)
+
+    # finally, setup all the addins we determined to be installed
+    hooks.reset()
+    for addin in to_be_setup:
         addin.setup()
-
     db.reconfigure()
+
+    return to_be_setup
 
 # at least for now, those are the same
 reinstall = install
