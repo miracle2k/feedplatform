@@ -148,9 +148,13 @@ class ModelsProxy(types.ModuleType):
         if '_models' in self.__dict__:
             return
 
+        from feedplatform import addins
+        # ensure that addins have been installed
+        addins.install()
+
         # collect fields for all the models
         blueprints = copy.deepcopy(BASE_MODELS)
-        for addin in config.ADDINS:
+        for addin in addins.ADDINS:
             if hasattr(addin, 'get_columns'):
                 for table, new_fields in addin.get_columns().items():
                     if not table in blueprints:

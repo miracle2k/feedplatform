@@ -33,7 +33,12 @@ from feedplatform import log
 from feedplatform.conf import config
 
 
-__all__ = ('base', 'install', 'reinstall')
+__all__ = ('base', 'install', 'reinstall', 'ADDINS')
+
+
+# Will hold the actual list of currently active addin instances, as
+# opposed to config.ADDINS, which is just the original user input.
+ADDINS = None
 
 
 class base(object):
@@ -109,7 +114,7 @@ def _make_addin(addin):
         addin = addin()
     return addin
 
-def install(addins=None):
+def reinstall(addins=None):
     """Install the addins specified by the configuration, or via
     ``addins`.
 
@@ -172,7 +177,17 @@ def install(addins=None):
         addin.setup()
     db.reconfigure()
 
+    global ADDINS
+    ADDINS = to_be_setup
     return to_be_setup
 
-# at least for now, those are the same
-reinstall = install
+
+def install(*args, **kwargs):
+    """Like ``reinstall``, but only works the very first time the
+    addins need to be installed. If they already are, this is a noop.
+
+    Useful if you need to ensure that addins are active.
+    """
+    global ADDINS
+    if ADDINS is None:
+        return reinstall(*args, **kwargs)
