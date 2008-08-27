@@ -25,6 +25,7 @@ via a class reference.
 """
 
 import types
+import inspect
 from feedplatform import hooks
 from feedplatform import db
 from feedplatform import log
@@ -104,6 +105,17 @@ def install(addins=None):
 
     hooks.reset()
     for addin in addins:
+        if isinstance(addin, type):
+            # a class name was specified, check that we can
+            # auto-create an instance.
+            if not addin.__init__ is object.__init__: # won't work with getargspec
+                args, _, _, defaults = inspect.getargspec(addin.__init__)
+                if (not defaults and args) or (len(args) != len(defaults)):
+                    raise ValueError('The addin "%s" was given as a class, '
+                        'rather than an instance, but requires arguments '
+                        'to be constructed.' % addin.__name__)
+
+            addin = addin()
         addin.setup()
 
     db.reconfigure()
