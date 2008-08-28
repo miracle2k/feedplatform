@@ -89,6 +89,11 @@ class store_enclosures(addins.base):
         }
 
     def on_process_item(self, item, entry_dict, item_created):
+        """
+        Per the suggested protocol, we're using ``process_item``, since we
+        don't want nor need to cause an update to the item, but instead
+        require it to be flushed, so we can hook up enclosures to it.
+        """
 
         enclosures = entry_dict.get('enclosures', ())
 
@@ -116,7 +121,8 @@ class store_enclosures(addins.base):
             try:
                 enclosure = db.get_one(
                     db.store.find(db.models.Enclosure,
-                        db.models.Enclosure.href == href))
+                        db.models.Enclosure.href == href,
+                        db.models.Enclosure.item_id == item.id))
             except db.MultipleObjectsReturned:
                 # TODO: log a warning/error, provide a hook
                 # TODO: test for this case
