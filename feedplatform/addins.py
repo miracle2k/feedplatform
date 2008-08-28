@@ -61,7 +61,15 @@ class base(object):
         this method itself.
         """
 
-        # auto-register all hooks ('on_*'-pattern)
+        # register new hook that the addin wants to define
+        if hasattr(self, 'get_hooks'):
+            new_hooks = self.get_hooks()
+            if hooks:
+                for name in new_hooks:
+                    hooks.register(name)
+
+
+        # auto-register all hook callbacks ('on_*'-pattern)
         for name in dir(self):
             if name.startswith('on_'):
                 attr = getattr(self, name)

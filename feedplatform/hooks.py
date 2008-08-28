@@ -12,17 +12,19 @@ in turn to other addins.
 # TODO: the list of hooks needs to be updated with more info.
 """
 
+import copy
+
 
 __all__  = (
     'SUPPORTED_HOOKS',
     'reset',
     'add_callback',
     'trigger',
+    'register',
 )
 
 
-# simple method to validate names and avoid bugs due to misspellings
-SUPPORTED_HOOKS = [
+_DEFAULT_HOOKS = [
     # Called before a feed is downloaded and
     # parsed. Gets passed the feed db object
     # and a parser argument dict. Can return
@@ -122,16 +124,19 @@ SUPPORTED_HOOKS = [
     'alien_invasion',
 ]
 
+# simple method to validate names and avoid bugs due to misspellings
+SUPPORTED_HOOKS = None
 
 # store registered callbacks: dict of (callable => priority) dicts
-_HOOKS = {}
+_CALLBACKS = None
 
 
 def reset():
-    """Remove all registered callbacks.
+    """Remove all registered callbacks and custom hooks.
     """
-    global _HOOKS
-    _HOOKS = {}
+    global _CALLBACKS, SUPPORTED_HOOKS
+    _CALLBACKS = {}
+    SUPPORTED_HOOKS = copy.copy(_DEFAULT_HOOKS)
 
 
 def add_callback(name, func, priority=0):
@@ -143,16 +148,16 @@ def add_callback(name, func, priority=0):
 
     _validate_hook_name(name)
 
-    if not name in _HOOKS:
-        _HOOKS[name] = {}
+    if not name in _CALLBACKS:
+        _CALLBACKS[name] = {}
 
-    if func in _HOOKS[name]:
+    if func in _CALLBACKS[name]:
         raise ValueError('The callback (%s) is already registered' % func)
 
-    _HOOKS[name][func] = priority
-    _HOOKS[name] = dict(sorted(_HOOKS[name].iteritems(),
-                               key=lambda (k,v): v,
-                               reverse=True))
+    _CALLBACKS[name][func] = priority
+    _CALLBACKS[name] = dict(sorted(_CALLBACKS[name].iteritems(),
+                                   key=lambda (k,v): v,
+                                   reverse=True))
 
 
 def trigger(name, args=[], kwargs={}, all=False):
@@ -166,7 +171,7 @@ def trigger(name, args=[], kwargs={}, all=False):
 
     _validate_hook_name(name)
 
-    for func, priority in _HOOKS.get(name, {}).iteritems():
+    for func, priority in _CALLBACKS.get(name, {}).iteritems():
         result = func(*args, **kwargs)
         if result is not None and not all:
             return result
@@ -175,3 +180,17 @@ def trigger(name, args=[], kwargs={}, all=False):
 def _validate_hook_name(name):
     if not name in SUPPORTED_HOOKS:
         raise KeyError('No hook named "%s"' % name)
+
+
+def register(name):
+    """Register a new hook name.
+
+    This will simply mark that particular name as available.
+    """
+    global SUPPORTED_HOOKS
+    if not name in SUPPORTED_HOOKS:
+        SUPPORTED_HOOKS.append(name)
+
+
+# initialize the module
+reset()

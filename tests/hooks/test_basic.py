@@ -50,6 +50,7 @@ def test_multiple():
     assert hooks.trigger('alien_invasion', all=True) == None
     assert test_multiple.counter == 3
 
+
 def test_priority():
     # fifo: without a priority, the callback added first is called first
     hooks.reset()
@@ -65,9 +66,35 @@ def test_priority():
     hooks.add_callback('alien_invasion', lambda: 'p5', priority=5)
     assert hooks.trigger('alien_invasion') == 'p20'
 
+
+def test_custom():
+    """Test custom, non-default hooks.
+    """
+
+    # this fails, hook doesn't yet exist
+    assert_raises(Exception, hooks.add_callback, 'i_love_you', lambda: None)
+    assert_raises(Exception, hooks.trigger, 'i_love_you')
+
+    # after we register the hook, it works
+    hooks.register('i_love_you')
+    hooks.add_callback('i_love_you', lambda: None)
+    hooks.trigger('i_love_you')
+
+    # registering the same hook multiple times is a no-op
+    hooks.register('i_love_you')
+    hooks.register('i_love_you')
+
+
 def test_reset():
     # reset() was already used throughout previous tests,
     # but for good measure, do it specifically.
+
+    # callback is no longer registered after a reset
     hooks.add_callback('alien_invasion', lambda: 42)
     hooks.reset()
     assert hooks.trigger('alien_invasion') == None
+
+    # custom hook is gone after a reset
+    hooks.register('i_love_you')
+    hooks.reset()
+    assert_raises(Exception, hooks.add_callback, 'i_love_you', lambda: None)
