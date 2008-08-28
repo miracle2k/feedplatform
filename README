@@ -154,6 +154,7 @@ see the docstrings in the source code of each for more information.
     * collect_feed_data
     * collect_item_data
     * store_enclosures
+    * collect_enclosure_data
     * update_redirects
     * guid_by_content
     * guid_by_enclosure

@@ -57,13 +57,21 @@ class _base_data_collector(addins.base):
         """
         for field in self.fields:
             # dates need to be converted to datetime
-            if field in self.date_fields:
+            if self.date_fields and field in self.date_fields:
                 source_field = "%s_parsed" % field
                 new_value = struct_to_datetime(source_dict.get(source_field))
             else:
-                new_value = source_dict.get(field)
+                new_value = self._process_field(field, source_dict.get(field))
 
             setattr(obj, field, new_value)
+
+    def _process_field(self, field, value):
+        """Overwrite this if some of your collector's default fields
+        need additional processing.
+
+        Should return the final value.
+        """
+        return value
 
 
 class collect_feed_data(_base_data_collector):

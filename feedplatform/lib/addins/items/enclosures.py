@@ -5,13 +5,18 @@ enclosure and doesn't rely on a separate table, but rather fields
 in the item table might be nice.
 """
 
+from storm.locals import Unicode, Int, Reference, ReferenceSet
+
 from feedplatform import addins
 from feedplatform import db
-from storm.locals import Unicode, Int, Reference, ReferenceSet
+from feedplatform import hooks
+from feedplatform.lib.addins.feeds.collect_feed_data \
+    import _base_data_collector
 
 
 __all__ = (
     'store_enclosures',
+    'collect_enclosure_data'
 )
 
 
@@ -37,11 +42,38 @@ class store_enclosures(addins.base):
 
     To make ``collect_enclosure_data`` and possibly other addin
     functionality work, this addin registers additional hooks that
-    make it possible to customize the enclosure handling.
+    make it possible to customize the enclosure handling. Those work
+    pretty much the same way as the hooks for item processing:
+
+        * create_enclosure (item, enclosure_dict, href)
+            Before an Enclosure model instance is created; May return
+            one to override the default creation.
+
+        * new_enclosure (enclosure, enclosure_dict)
+            After a new enclosure has been created; can be used to
+            initialize it.
+
+        * found_enclosure (enclosure, enclosure_dict)
+            When an enclosure was determined to be already existing.
+            Can be used to update it.
+
+        * process_enclosure (enclosure, enclosure_dict, created)
+            Like ``process_item``, this combines both ``new_enclosure``
+            and ``found_enclosure``. While the enclosure, unlike an item,
+            will not have been flushed at this point, you should
+            nevertheless decide whether to use this hook on the same
+            merits: If you just want to modify the element, use
+            ``new`` and ``found``, otherwise use ``process``. If every
+            addin follows this principle, ideally, during ``process``,
+            the enclosure object itself will not be changed, and when
+            combined with an addin that implicitely flushes the
+            enclosure, multiple writes to the enclosure are nevertheless
+            avoided.
     """
 
-    def __init__(self):
-        pass
+    def get_hooks(self):
+        return ('create_enclosure', 'new_enclosure',
+                'found_enclosure', 'process_enclosure',)
 
     def get_columns(self):
         return {
@@ -71,8 +103,11 @@ class store_enclosures(addins.base):
                     db.store.remove(enclosure)
 
         # add new enclosures
-        for enclosure_dict in entry_dict.enclosures:
+        for enclosure_dict in enclosures:
             href = enclosure_dict.get('href')
+            # bug in feedparser can return those as bytestrings when bozo
+            if href is not None and not isinstance(href, unicode):
+                href = href.decode('utf8', 'ignore')
             if not href:
                 self.log.debug('Item #%d: enclosure has no href '
                     '- skipping.' % item.id)
@@ -87,10 +122,68 @@ class store_enclosures(addins.base):
                 # TODO: test for this case
                 pass
 
+
             if enclosure is None:
-                enclosure = db.models.Enclosure()
-                enclosure.item = item
-                enclosure.href = href
-                db.store.add(enclosure)
+                # HOOK: CREATE_ENCLOSURE
+                enclosure = hooks.trigger('create_enclosure',
+                    args=[item, enclosure_dict, href])
+                if not enclosure:
+                    enclosure = db.models.Enclosure()
+                    enclosure.item = item
+                    enclosure.href = href
+                    db.store.add(enclosure)
+
+                # HOOK: NEW_ENCLOSURE
+                hooks.trigger('new_enclosure',
+                    args=[enclosure, enclosure_dict])
+                enclosure_created = True
 
                 self.log.debug('Item #%d: new enclosure: %s' % (item.id, href))
+            else:
+                # HOOK: FOUND_ENCLOSURE
+                hooks.trigger('found_enclosure',
+                    args=[enclosure, enclosure_dict])
+                enclosure_created = False
+
+            # HOOK: PROCESS_ENCLOSURE
+            hooks.trigger('process_enclosure',
+                args=[enclosure, enclosure_dict, enclosure_created])
+
+
+class collect_enclosure_data(_base_data_collector):
+    """Collect enclosure-level meta data, and store it in the database.
+
+    This works precisely like ``collect_feed_data``, except that
+    the supported known fields are:
+
+    length, type
+
+    Although you may specify custom fields, their use is limited, since
+    their rarely will be any.
+    """
+
+    depends = (store_enclosures,)
+
+    model_name = 'enclosure'
+    standard_fields = {
+        'length': (Int, (), {}),
+        'type': (Unicode, (), {}),
+    }
+
+    def _process_field(self, field, value):
+        if field == 'length':
+            try:
+                return int(value)
+            except ValueError:
+                # TODO: potentially log an error here (in the
+                # yet-to-be-designed error system, not just a log message)?
+                self.log.debug('Enclosure has invalid length value: %s' % value)
+                return None
+        else:
+            return super(collect_enclosure_data, self)._process_field(field, value)
+
+    def on_found_enclosure(self, enclosure, enclosure_dict):
+        return self._process(enclosure, enclosure_dict)
+
+    def on_new_enclosure(self, enclosure, enclosure_dict):
+        return self._process(enclosure, enclosure_dict)
