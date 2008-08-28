@@ -186,6 +186,13 @@ def reconfigure():
     This is only necessary if the database objects already have been
     accessed (since they are created on demand), or if the available
     models have changed.
+
+    # TODO: improve this to not recreate the proxy objects, but rather
+    just reset them; this means that when the db is reconfigured(),
+    references to the proxy objects will switch over to the new
+    backends. for example, this is useful in tests where module-level
+    imports of the proxy objects currently fail due to the db being
+    reset when the test framework actually runs; also add tests for this.
     """
 
     # Setup the database connection and store; note that at this point
