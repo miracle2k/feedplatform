@@ -57,11 +57,12 @@ class store_enclosures(addins.base):
         }
 
     def on_process_item(self, item, entry_dict, item_created):
+
         enclosures = entry_dict.get('enclosures', ())
 
         # check for deleted enclosures (don't bother with new items)
         if not item_created:
-            available_hrefs = [e.href for e in enclosures]
+            available_hrefs = [e.get('href') for e in enclosures]
             for enclosure in item.enclosures:
                 if not enclosure.href in available_hrefs:
                     self.log.debug('Item #%d: enclosure #%d ("%s") no '
