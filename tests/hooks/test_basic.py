@@ -7,24 +7,25 @@ from nose.tools import assert_raises
 from feedplatform import hooks
 
 
-def test_invalid():
+def test_validity():
     # invalid identifers result in exceptions
-    assert_raises(Exception, hooks.add_callback, 'worldpeace', lambda: None)
-    assert_raises(Exception, hooks.trigger, 'worldpeace')
+    assert_raises(KeyError, hooks.add_callback, 'worldpeace', lambda: None)
+    assert_raises(KeyError, hooks.trigger, 'worldpeace')
 
     # can't register the same function twice
     def foo(): pass
     hooks.add_callback('alien_invasion', foo)
-    assert_raises(Exception, hooks.add_callback, 'worldpeace', foo)
+    assert_raises(ValueError, hooks.add_callback, 'alien_invasion', foo)
 
-def test_valid():
     # valid identifers work
     hooks.reset()
     hooks.add_callback('alien_invasion', lambda x: x)
     assert hooks.trigger('alien_invasion', [5]) == 5
 
+
 def test_multiple():
-    # test handling of multiple callbacks for a hook
+    """Test handling of multiple callbacks for a hook.
+    """
 
     hooks.reset()
     # making this an attribute of a global avoids all kinds of scoping issues
