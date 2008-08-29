@@ -19,6 +19,7 @@ __all__  = (
     'SUPPORTED_HOOKS',
     'reset',
     'add_callback',
+    'any',
     'trigger',
     'register',
 )
@@ -158,6 +159,17 @@ def add_callback(name, func, priority=0):
     _CALLBACKS[name] = dict(sorted(_CALLBACKS[name].iteritems(),
                                    key=lambda (k,v): v,
                                    reverse=True))
+
+
+def any(name):
+    """Returns True if at least one callback has been registered for
+    ``name``, otherwise ``False``.
+
+    Can be used if triggering a hook requires preparation work that
+    you want to avoid unless necessary.
+    """
+    _validate_hook_name(name)
+    return len(_CALLBACKS.get(name, {})) > 0
 
 
 def trigger(name, args=[], kwargs={}, all=False):

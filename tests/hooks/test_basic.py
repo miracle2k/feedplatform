@@ -11,6 +11,7 @@ def test_validity():
     # invalid identifers result in exceptions
     assert_raises(KeyError, hooks.add_callback, 'worldpeace', lambda: None)
     assert_raises(KeyError, hooks.trigger, 'worldpeace')
+    assert_raises(KeyError, hooks.any, 'worldpeace')
 
     # can't register the same function twice
     def foo(): pass
@@ -21,6 +22,18 @@ def test_validity():
     hooks.reset()
     hooks.add_callback('alien_invasion', lambda x: x)
     assert hooks.trigger('alien_invasion', [5]) == 5
+
+
+def test_any():
+    """Test the any() function.
+    """
+    hooks.reset()
+    assert hooks.any('alien_invasion') == False
+    hooks.add_callback('alien_invasion', lambda: None)
+    assert hooks.any('alien_invasion') == True
+
+    # invalid hook names raise an error
+    assert_raises(KeyError, hooks.any, 'worldpeace')
 
 
 def test_multiple():
