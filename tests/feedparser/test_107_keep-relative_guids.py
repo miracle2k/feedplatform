@@ -2,7 +2,7 @@
 absolute URL.
 """
 
-from tests import feedev
+from feedplatform import test as feedev
 from feedplatform import db
 
 class TestFeed(feedev.Feed):

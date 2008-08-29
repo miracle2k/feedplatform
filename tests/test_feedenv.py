@@ -3,7 +3,7 @@
 
 import sys
 from StringIO import StringIO
-from tests import feedev
+from feedplatform import test as feedev
 from feedplatform import log
 
 tests_run = 0

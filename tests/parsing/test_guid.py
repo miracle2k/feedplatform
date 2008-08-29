@@ -5,7 +5,7 @@ separately. Here, we simply deal with whether guids have the desired
 effect at all: identifying items.
 """
 
-from tests import feedev
+from feedplatform import test as feedev
 
 class FooFeed(feedev.Feed):
     content = """

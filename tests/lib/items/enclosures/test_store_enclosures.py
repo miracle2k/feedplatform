@@ -1,6 +1,6 @@
 # TODO: better test enclosure href uniqueness
 
-from tests import feedev
+from feedplatform import test as feedev
 from feedplatform.lib import store_enclosures
 from feedplatform import db
 

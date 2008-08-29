@@ -1,5 +1,5 @@
 ﻿from storm.locals import Unicode
-from tests import feedev
+from feedplatform import test as feedev
 from feedplatform.lib import collect_enclosure_data
 
 
@@ -48,7 +48,7 @@ class BozoFeed(feedev.Feed):
     """
 
     def pass1(feed):
-        # even though the feed is bozo, the colletor still
+        # even though the feed is bozo, the collector still
         # works. there is little danger that non-feed data will
         # end up with enclosures in the feedparser.
         assert feed.items.one().enclosures.one().length == 10

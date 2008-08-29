@@ -1,4 +1,4 @@
-from tests import feedev
+from feedplatform import test as feedev
 from feedplatform import db
 from feedplatform.lib import guid_by_content
 

@@ -1,5 +1,5 @@
 from nose.tools import assert_raises
-from tests import feedev
+from feedplatform import test as feedev
 from feedplatform.lib import update_redirects
 from feedplatform import db
 from feedplatform.db import models

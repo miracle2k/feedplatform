@@ -1,4 +1,4 @@
-from tests import feedev
+from feedplatform import test as feedev
 from feedplatform import addins
 
 class test_addin(addins.base):

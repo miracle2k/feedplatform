@@ -165,6 +165,14 @@ see the docstrings in the source code of each for more information.
 Your own addins
 ---------------
 
+.. attention:: Univeral Feed Parser
+
+    For more extensive work with FeedPlatform, like writing your own
+    addin, you should be somewhat familiar with the Universal Feed
+    Parser library as well, exspecially with respect to it's content
+    normalization of Atom and RSS feeds. See it's documentation at:
+    http://www.feedparser.org/docs/
+
 Writing an addin is hopefully pretty straightforward - while the built
 functionality should cover some good ground, the ultimate flexibility
 available through custom addins is what FeedPlatform was created for.
@@ -307,7 +315,7 @@ parsed multiple times, and every time the test code needs to make sure
 that the necessary conditions are met. Using feed evolutions, a test
 module might look like this:
 
-    from tests import feedev
+    from feedplatform import test as feedev
 
     class GuidTest(feedev.Feed):
         content = \"""
@@ -328,7 +336,7 @@ module might look like this:
 
 The module contains only one nose testcase, which simply instructs the
 our framework to test the current module. It will then, for the number
-of passes requested, update each feed (all ``feedev.Feed`` subclasses)
+of passes requested, update each feed (all ``test.Feed`` subclasses)
 through the FeedPlatform libraries (which is what we are testing)! The
 number of passes is determined by the maximum X of all the ``passX``
 test methods that are defined on any of the feeds.

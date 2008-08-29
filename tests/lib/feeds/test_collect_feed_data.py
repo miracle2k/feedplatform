@@ -1,7 +1,6 @@
 from storm.locals import Unicode
-from tests import feedev
+from feedplatform import test as feedev
 from feedplatform.lib import collect_feed_data
-from feedplatform import db
 
 
 ADDINS = [
@@ -20,7 +19,7 @@ class ValidFeed(feedev.Feed):
             </title>
             <pubDate>
                 {% =1 %}Fri, 15 Aug 2008 23:01:39 +0200{% end %}
-                {% =2 %}Fri, 17 Aug 2008 23:01:39 +0200e{% end %}
+                {% =2 %}Fri, 17 Aug 2008 23:01:39 +0200{% end %}
             </pubDate>
             <prism:issn>
                 {% =1 %}0066-6666{% end %}

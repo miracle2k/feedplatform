@@ -3,7 +3,6 @@
 
 from feedplatform import addins
 from feedplatform import db
-from feedplatform import log
 
 
 __all__ = (

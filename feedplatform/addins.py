@@ -68,7 +68,6 @@ class base(object):
                 for name in new_hooks:
                     hooks.register(name)
 
-
         # auto-register all hook callbacks ('on_*'-pattern)
         for name in dir(self):
             if name.startswith('on_'):

@@ -1,5 +1,5 @@
 from storm.locals import Unicode
-from tests import feedev
+from feedplatform import test as feedev
 from feedplatform.lib import collect_item_data
 
 

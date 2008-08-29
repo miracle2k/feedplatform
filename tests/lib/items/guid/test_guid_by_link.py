@@ -1,4 +1,4 @@
-from tests import feedev
+from feedplatform import test as feedev
 from feedplatform.lib import guid_by_link
 
 ADDINS = [guid_by_link(prefix='lnk::')]

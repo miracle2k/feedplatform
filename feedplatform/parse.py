@@ -148,7 +148,7 @@ def update_feed(feed):
 
 
         if not item:
-            # HOOK: BEFORE_NEW_ITEM
+            # HOOK: CREATE_ITEM
             item = hooks.trigger('create_item', args=[feed, entry_dict, guid])
             if not item:
                 item = db.models.Item()

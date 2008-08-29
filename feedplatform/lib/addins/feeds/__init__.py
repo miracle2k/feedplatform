@@ -15,3 +15,6 @@ def download_favicon():
 
 def prioritize_parse():
     raise NotImplementedError()
+
+def respect_ttl():
+    raise NotImplementedError()

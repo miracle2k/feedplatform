@@ -5,7 +5,6 @@ from storm.locals import Unicode, DateTime
 
 from feedplatform import addins
 from feedplatform import db
-from feedplatform import log
 from feedplatform.util import struct_to_datetime
 from feedplatform.lib.addins.feeds.collect_feed_data \
     import _base_data_collector
