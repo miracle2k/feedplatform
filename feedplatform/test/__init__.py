@@ -70,7 +70,7 @@ from feedplatform import log
 from feedplatform import addins
 
 
-__all__ = ('testmod', 'testcaller', 'testcustom', 'Feed')
+__all__ = ('testmod', 'testcaller', 'testcustom', 'File', 'Feed')
 
 
 def testmod(module=None):
@@ -115,23 +115,24 @@ def testcaller():
 
 
 def _collect_and_test(ident_dict):
-    # find all the test feeds defined in the module
-    feeds = {}
+    # find all the files/feeds defined in the module
+    files = {}
     for name, obj in ident_dict.iteritems():
         if isinstance(obj, type):
-           if issubclass(obj, Feed):
-               feeds[obj.name] = obj
+           if issubclass(obj, File):
+               files[obj.name] = obj
 
     # a testcase usually defines which addins it uses
     addins = ident_dict.get('ADDINS', [])
 
-    return testcustom(feeds, addins)
+    return testcustom(files, addins)
 
 
-def testcustom(feeds, addins=[]):
-    """Test a custom set of feed classes, using the specified addins.
+def testcustom(files, addins=[]):
+    """Test a custom set of feed and file classes, using the specified
+    addins.
 
-    Instead of a set of feed classes, you may also pass a dict of
+    Instead of a set of classes, you may also pass a dict of
     name => class pairs. Otherwise the name is deferred from the class.
 
     Example:
@@ -140,14 +141,12 @@ def testcustom(feeds, addins=[]):
         testcustom({'Feed1:': Feed1}, addins=[myaddin])
     """
 
-    if not feeds:
-        raise RuntimeError('No feeds specificed, nothing to test.')
-
-    if not isinstance(feeds, dict):
-        feed_dict = {}
-        for feed in feeds:
-            feed_dict[feed.__name__] = feed
-        feeds = feed_dict
+    # internally, we need the name -> class syntax
+    if not isinstance(files, dict):
+        files_dict = {}
+        for f in files:
+            files_dict[f.__name__] = f
+        files = files_dict
 
     # By this time the nose testrunner has redirected stdout. Reset
     # the log (it might still point to the real stdout) to make sure
@@ -155,18 +154,22 @@ def testcustom(feeds, addins=[]):
     log.reset(level=logging.DEBUG)
 
     # run the test case
-    test = FeedEvolutionTest(feeds, addins)
+    test = FeedEvolutionTest(files, addins)
     test.run()
 
 
-class Feed(object):
-    """Baseclass for a single feed of an evolution.
+class File(object):
+    """A file needed due testing, made available through HTTP, like
+    a feed image. It is also the baseclass of ``Feed``.
+
+    Note that you should subclass ``Feed`` to write your testcases.
+    No passes will be executed for a ``File`` class.
 
     Uses a metaclass to convert all functions to static methods,
     which makes testing easier since we don't have to deal with
     instances, or ``self`` arguments. Classes are merely used
     here to structure the testing code in a manner that easily
-    allows multiple feeds per testcase.
+    allows multiple feeds (and files) per testcase.
     """
 
     class __metaclass__(type):
@@ -185,13 +188,31 @@ class Feed(object):
             if name == 'name':
                 return cls.__name__
             elif name == 'url':
-                return u'http://feeds/%s' % cls.name
+                return u'http://files/%s' % cls.name
             elif name == 'status':
                 return 200
             elif name == 'headers':
                 return {}
             else:
                 raise AttributeError("%s" % name)
+
+
+class Feed(File):
+    """Baseclass for a single feed of an evolution.
+
+    Currently, this is not much different than ``File``, but only
+    subclasses of ``Feed`` are tested, i.e. it's passes run, whereas
+    ``File`` simply makes it's content available, not more.
+    """
+
+    class __metaclass__(type(File)):
+
+        def __getattr__(cls, name):
+            # use a different default url for feeds
+            if name == 'url':
+                return u'http://feeds/%s' % cls.name
+            else:
+                return type(File).__getattr__(cls, name)
 
 
 class FeedEvolutionTest(object):
@@ -201,16 +222,27 @@ class FeedEvolutionTest(object):
     We use one instance of this to have it run exactly one test.
     """
 
-    def __init__(self, feeds, addins):
-        self.feeds = feeds
+    def __init__(self, files, addins):
+        self.files = files
         self.addins = addins
         self.current_pass = 0
         self.num_passes = self._determine_pass_count()
+        if self.num_passes < 1:
+            raise RuntimeError('No passes defined - nothing to test')
+
+    @property
+    def feeds(self):
+        """Iterator that returns only the feeds from the set of
+        specified ``File`` classes.
+        """
+        for name, obj in self.files.iteritems():
+            if issubclass(obj, Feed):
+                yield obj
 
     re_passfunc = re.compile(r'^pass(\d+)$')
     def _determine_pass_count(self):
         max_pass = 0
-        for feed in self.feeds.values():
+        for feed in self.feeds:
             for name in dir(feed):
                 match = self.re_passfunc.match(name)
                 if match:
@@ -260,7 +292,7 @@ class FeedEvolutionTest(object):
             db.store.execute(create_stmt)
 
         # create feed rows
-        for feed in self.feeds.values():
+        for feed in self.feeds:
             dbobj = db.models.Feed()
             dbobj.url = feed.url
             db.store.add(dbobj)
@@ -278,7 +310,7 @@ class FeedEvolutionTest(object):
         considered failed.
         """
 
-        # if the user hasn't specified anything, we'll use a
+        # If the user hasn't specified anything, we'll use a
         # memory-based sqlite database.
         if not (config.configured and config.DATABASE):
             config.configure(**{'DATABASE': 'sqlite:'})
@@ -299,7 +331,7 @@ class FeedEvolutionTest(object):
             self._initdb()
 
             for self.current_pass in range(1, self.num_passes+1):
-                for feed in self.feeds.values():
+                for feed in self.feeds:
                     testfunc = getattr(feed, 'pass%d'%self.current_pass, None)
                     # Try to be speedier by only parsing feeds when they
                     # actually have a handler for the current pass.
@@ -319,19 +351,19 @@ class FeedEvolutionTest(object):
 
 
     tag_re = re.compile('{%(.*?)%}')
-    def get_feed(self, url):
-        """Returns feed contents of ``url``, rendered for the current
+    def get_file(self, url):
+        """Return contents of ``url``, rendered for the current
         pass.
 
-        Because a test feed content may differ in different stages of
-        the test, this function passes the feed content through a very
-        simple templating engine.
+        Because a test feed/file content may differ in different
+        stages of the test, this function passes the content
+        through a very simple templating engine.
 
-        Used by ``MockHTTPHandler`` when feeds are requested through
-        urllib2.
+        Used by ``MockHTTPHandler`` when requests are made
+        through urllib2.
         """
 
-        fs = [f for f in self.feeds.values() if f.url == url]
+        fs = [f for f in self.feeds if f.url == url]
         if not fs:
             raise KeyError('No feed for "%s"' % key)  # KeyError = 404
         # possibly multiple feeds with the same urls could exist, as
@@ -356,6 +388,7 @@ class FeedEvolutionTest(object):
                 if not do_render:
                     return content
 
+        # inline function, flow proceeds below
         def evaluate_tag(expr):
             """Tests ``expr`` against ``current_pass``, returns a bool.
 
@@ -487,7 +520,7 @@ class MockHTTPHandler(urllib2.BaseHandler):
     def http_open(self, req):
         url = req.get_full_url()
         try:
-            status, headers, content = self.store.get_feed(url)
+            status, headers, content = self.store.get_file(url)
         except Exception, e:
             # Exception will be swallowed by the feedparser lib anyway,
             # try to get some attention through a message (to stderr, or
