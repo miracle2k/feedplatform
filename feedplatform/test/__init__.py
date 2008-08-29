@@ -80,32 +80,6 @@ def testmod(module=None):
     whereas doctest would just use ``__main__``.
     """
 
-    # For some strange reason currently beyond my comprehension,
-    # but possible due to nose magic, by the time a test function
-    # in one of the testcase files calls ``testmod()`` (us),
-    # ``globals()`` now contains entries for all subdirectories of
-    # the ``tests`` directory (i.e. the modules of the "tests"
-    # package) that we have nose test.
-    # Because there is a subdirectory "config" which contains tests
-    # that are supposed to test FeedPlatform's configuration
-    # facilites within ``feedplatform.conf``, the ``config`` we have
-    # imported in this module from there is overwritten: It now points
-    # to the module containing the tests, rather than to the
-    # configuration object.
-    # Thus, from this point on, the code in this module would use
-    # to the wrong object when referring to ``config``.
-    #
-    # Note that while the test function is executed (our caller, one
-    # level up the call stack), this stuff is not yet in globals().
-    #
-    # For now, our solution is to import the config again to put the
-    # right object once again inside the global scope.
-    #
-    # In the future, there might be problems with other identifers
-    # as well, as we are adding more tests.
-    global config
-    from feedplatform.conf import config
-
     # By this time the nose testrunner as redirected stdout. Reset
     # the log (it might still point to the real stdout) to make sure
     # that any messages will indeed be captured by nose.
