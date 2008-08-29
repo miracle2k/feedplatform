@@ -4,7 +4,6 @@ from feedplatform.lib import update_redirects
 from feedplatform import db
 from feedplatform.db import models
 
-ADDINS = []
 
 class ExistingFeedA(feedev.Feed):
     url = u"http://new.org/feeds/rss"
@@ -14,17 +13,13 @@ class ExistingFeedB(feedev.Feed):
     url = u"http://new.org/feeds/rss"
     content = ""
 
-class PermanentlyRedirectedFeed(feedev.Feed):
+class _BasePermanentlyRedirectedFeed(feedev.Feed):
     url = u"http://myolddomain.com/feed.xml"
     status = 301
     headers = {'Location': u"http://new.org/feeds/rss"}
     content = ""
 
-    def pass1(feed):
-        # patched in dynamically by each test
-        pass
-
-class TemporarilyRedirectedFeed(PermanentlyRedirectedFeed):
+class TemporarilyRedirectedFeed(_BasePermanentlyRedirectedFeed):
     url = u"http://anotherdomain.com/feed.xml"
     status = 302
 
@@ -33,56 +28,55 @@ class TemporarilyRedirectedFeed(PermanentlyRedirectedFeed):
         assert feed.url == u"http://anotherdomain.com/feed.xml"
 
 
+COMMON_FEEDS = [ExistingFeedA, ExistingFeedB, TemporarilyRedirectedFeed]
+
+
 def test_force():
-    global ADDINS
-    ADDINS = [update_redirects(force=True)]
+    class PermanentlyRedirectedFeed(_BasePermanentlyRedirectedFeed):
+        def pass1(feed):
+            # feed url has changed
+            assert feed.url == u'http://new.org/feeds/rss'
 
-    def check(feed):
-        # feed url has changed
-        assert feed.url == u'http://new.org/feeds/rss'
-    PermanentlyRedirectedFeed.pass1 = staticmethod(check)
+    feedev.testcustom(COMMON_FEEDS + [PermanentlyRedirectedFeed],
+                      addins=[update_redirects(force=True)])
 
-    feedev.testmod()
 
 def test_ignore():
-    global ADDINS
-    ADDINS = [update_redirects(ignore=True)]
+    class PermanentlyRedirectedFeed(_BasePermanentlyRedirectedFeed):
+        def pass1(feed):
+            # feed url has *not* changed
+            assert feed.url == u'http://myolddomain.com/feed.xml'
 
-    def check(feed):
-        # feed url has *not* changed
-        assert feed.url == u'http://myolddomain.com/feed.xml'
-    PermanentlyRedirectedFeed.pass1 = staticmethod(check)
+    feedev.testcustom(COMMON_FEEDS + [PermanentlyRedirectedFeed],
+                      addins=[update_redirects(ignore=True)])
 
-    feedev.testmod()
 
 def test_delete_self():
-    global ADDINS
-    ADDINS = [update_redirects(delete="self")]
+    class PermanentlyRedirectedFeed(_BasePermanentlyRedirectedFeed):
+        def pass1(feed):
+            # current feed object does no longer exist
+            assert db.store.find(models.Feed, models.Feed.id == feed.id).count() == 0
 
-    def check(feed):
-        # current feed object does no longer exist
-        assert db.store.find(models.Feed, models.Feed.id == feed.id).count() == 0
+            # there were two other feeds with the same url that we are
+            # redirecting to, they both still exist (we have only deleted
+            # ourselfs).
+            assert db.store.find(models.Feed, models.Feed.url == u'http://new.org/feeds/rss').count() == 2
 
-        # there were two other feeds with the same url that we are
-        # redirecting to, they both still exist (we have only deleted
-        # ourselfs).
-        assert db.store.find(models.Feed, models.Feed.url == u'http://new.org/feeds/rss').count() == 2
-    PermanentlyRedirectedFeed.pass1 = staticmethod(check)
+    feedev.testcustom(COMMON_FEEDS + [PermanentlyRedirectedFeed],
+                      addins=[update_redirects(delete="self")])
 
-    feedev.testmod()
 
 def test_delete_other():
-    global ADDINS
-    ADDINS = [update_redirects(delete="other")]
+    class PermanentlyRedirectedFeed(_BasePermanentlyRedirectedFeed):
+        def pass1(feed):
+            # url has changed
+            assert feed.url == u'http://new.org/feeds/rss'
+            # no other feed with that url exists
+            assert db.store.find(models.Feed, models.Feed.url == u'http://new.org/feeds/rss').count() == 1
 
-    def check(feed):
-        # url has changed
-        assert feed.url == u'http://new.org/feeds/rss'
-        # no other feed with that url exists
-        assert db.store.find(models.Feed, models.Feed.url == u'http://new.org/feeds/rss').count() == 1
-    PermanentlyRedirectedFeed.pass1 = staticmethod(check)
+    feedev.testcustom(COMMON_FEEDS + [PermanentlyRedirectedFeed],
+                      addins=[update_redirects(delete="other")])
 
-    feedev.testmod()
 
 def test_instantiation():
     # must pass at least one

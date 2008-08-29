@@ -12,6 +12,12 @@ Such a test case will thus involve multiple "passes", i.e. the feed is
 parsed multiple times, and every time the test code needs to make sure
 that the necessary conditions are met.
 
+The module provides multiple entrypoints like ``testmod`` or
+``testscustom``, all of which runs a specific set of "feed evolution"
+tests (e.g. as defined in the module), meaning it will cause the defined
+feeds to be added to the database, parsed through multiple passes as
+requested, and the test callbacks being called.
+
 Example of a nose test module using this infrastructure (not using
 real feed contents for simplicity):
 
@@ -64,30 +70,20 @@ from feedplatform import log
 from feedplatform import addins
 
 
-__all__ = ('testmod', 'Feed')
+__all__ = ('testmod', 'testcaller', 'testcustom', 'Feed')
 
 
 def testmod(module=None):
     """Test the caller's module.
-
-    Runs the "feed evolution" test defined by the module, e.g. will
-    cause the defined feeds to be added to the database, parsed
-    through multiple passes as requested, and the test callbacks
-    being called.
 
     Differs from doctest's ``testmod``` in that it actually tests
     the **caller** if not explicit module reference was passed,
     whereas doctest would just use ``__main__``.
     """
 
-    # By this time the nose testrunner as redirected stdout. Reset
-    # the log (it might still point to the real stdout) to make sure
-    # that any messages will indeed be captured by nose.
-    log.reset(level=logging.DEBUG)
-
     # If no explicit module was passed, try to find the caller's
     # module by inspecting the stack.
-    # Use tbe try-finally pattern explained in the docs:
+    # Use the try-finally pattern explained in the docs:
     # http://docs.python.org/lib/inspect-stack.html
     if not module:
         frame = inspect.stack()[1][0]
@@ -96,19 +92,70 @@ def testmod(module=None):
         finally:
             del frame
 
+    namespace = dict([(name, getattr(module, name)) for name in dir(module)])
+    return _collect_and_test(namespace)
+
+
+def testcaller():
+    """Test the caller's local namespace.
+
+    The global namespace is **ignored** by this.
+    """
+
+    # Use the try-finally pattern explained in the docs:
+    # http://docs.python.org/lib/inspect-stack.html
+    frame = inspect.stack()[1][0]
+    try:
+        namespace = frame.f_locals
+        name = "%s in %s" % (frame.f_code.co_name, frame.f_globals['__name__'])
+    finally:
+        del frame
+
+    return _collect_and_test(namespace)
+
+
+def _collect_and_test(ident_dict):
     # find all the test feeds defined in the module
     feeds = {}
-    for name in dir(module):
-        obj = getattr(module, name)
+    for name, obj in ident_dict.iteritems():
         if isinstance(obj, type):
            if issubclass(obj, Feed):
                feeds[obj.name] = obj
 
     # a testcase usually defines which addins it uses
-    addins = getattr(module, 'ADDINS', [])
+    addins = ident_dict.get('ADDINS', [])
+
+    return testcustom(feeds, addins)
+
+
+def testcustom(feeds, addins=[]):
+    """Test a custom set of feed classes, using the specified addins.
+
+    Instead of a set of feed classes, you may also pass a dict of
+    name => class pairs. Otherwise the name is deferred from the class.
+
+    Example:
+
+        testcustom([Feed1, Feed2, Feed3], addins=[myaddin])
+        testcustom({'Feed1:': Feed1}, addins=[myaddin])
+    """
+
+    if not feeds:
+        raise RuntimeError('No feeds specificed, nothing to test.')
+
+    if not isinstance(feeds, dict):
+        feed_dict = {}
+        for feed in feeds:
+            feed_dict[feed.__name__] = feed
+        feeds = feed_dict
+
+    # By this time the nose testrunner has redirected stdout. Reset
+    # the log (it might still point to the real stdout) to make sure
+    # that any messages will indeed be captured by nose.
+    log.reset(level=logging.DEBUG)
 
     # run the test case
-    test = FeedEvolutionTest(feeds, addins, module)
+    test = FeedEvolutionTest(feeds, addins)
     test.run()
 
 
@@ -154,13 +201,11 @@ class FeedEvolutionTest(object):
     We use one instance of this to have it run exactly one test.
     """
 
-    def __init__(self, feeds, addins, module):
+    def __init__(self, feeds, addins):
         self.feeds = feeds
         self.addins = addins
         self.current_pass = 0
         self.num_passes = self._determine_pass_count()
-        if self.num_passes <= 0:
-            raise RuntimeError("Warning: Module %s has no passes" % module)
 
     re_passfunc = re.compile(r'^pass(\d+)$')
     def _determine_pass_count(self):

@@ -6,6 +6,6 @@ def test():
     try:
         feedev.testmod()
     except Exception, e:
-        assert "has no passes" in str(e)
+        assert "nothing to test" in str(e)
     else:
         raise AssertionError("testmod() did not fail on pass-less module")
