@@ -57,6 +57,7 @@ import operator
 import inspect
 import urllib, urllib2
 import httplib
+import traceback
 
 # cStringIO is not subclassable and doesn't allow attribute assignment
 import StringIO
@@ -223,7 +224,7 @@ class FeedEvolutionTest(object):
     """
 
     def __init__(self, files, addins):
-        self.files = files
+        self._files = files
         self.addins = addins
         self.current_pass = 0
         self.num_passes = self._determine_pass_count()
@@ -235,9 +236,16 @@ class FeedEvolutionTest(object):
         """Iterator that returns only the feeds from the set of
         specified ``File`` classes.
         """
-        for name, obj in self.files.iteritems():
+        for obj in self._files.itervalues():
             if issubclass(obj, Feed):
                 yield obj
+
+    @property
+    def files(self):
+        """Iterate over all files. Analogous to ``feeds``.
+        """
+        for obj in self._files.itervalues():
+            yield obj
 
     re_passfunc = re.compile(r'^pass(\d+)$')
     def _determine_pass_count(self):
@@ -341,11 +349,17 @@ class FeedEvolutionTest(object):
                         try:
                             testfunc(feed.dbobj)
                         except Exception, e:
+                            # re-raise the error as a new exception object
+                            # with details about which feed/pass failed,
+                            # as well as the traceback of the original
+                            # exception.
                             emsg = e.__class__.__name__
                             if str(e):
                                 emsg = '%s (%s)' % (e, emsg)
-                            raise Exception('Pass %d for "%s" failed: %s' %
-                                (self.current_pass, feed.name, emsg))
+                            tb = re.sub(r'(^|\n)', r'\1    ', traceback.format_exc())
+                            raise Exception('Pass %d for "%s" failed: %s\n\n'
+                                'The test''s traceback was:\n%s' % (
+                                    self.current_pass, feed.name, emsg, tb))
         finally:
             config.URLLIB2_HANDLERS = old_urllib2_handlers
 
@@ -363,9 +377,9 @@ class FeedEvolutionTest(object):
         through urllib2.
         """
 
-        fs = [f for f in self.feeds if f.url == url]
+        fs = [f for f in self.files if f.url == url]
         if not fs:
-            raise KeyError('No feed for "%s"' % key)  # KeyError = 404
+            raise KeyError('No file for "%s"' % url)  # KeyError = 404
         # possibly multiple feeds with the same urls could exist, as
         # is required by some tests.
         feed = fs[0]
@@ -382,7 +396,7 @@ class FeedEvolutionTest(object):
         # feed content for this pass.
         content = feed.content
         if callable(content):
-            content = content(num_passes)
+            content = content(self.current_pass)
             if isinstance(content, (list, tuple,)):
                 content, do_render = content
                 if not do_render:
