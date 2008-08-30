@@ -1,8 +1,17 @@
 """Generally helpful stuff, to be used by library code and addins.
 """
 
+import urllib2
 import datetime
 import calendar
+
+from feedplatform.conf import config
+
+
+__all__ = (
+    'struct_to_datetime',
+    'datetime_to_struct',
+)
 
 
 def struct_to_datetime(structt):
@@ -17,6 +26,7 @@ def struct_to_datetime(structt):
         return structt
     return datetime.datetime.utcfromtimestamp(calendar.timegm(structt))
 
+
 def datetime_to_struct(datetime):
     """Converts a datetime object to an UTC-based 9-tuple.
 
@@ -25,3 +35,15 @@ def datetime_to_struct(datetime):
     if not datetime:
         return datetime
     return datetime.utctimetuple()
+
+
+def urlopen(*args, **kwargs):
+    """
+    """
+    opener = urllib2.build_opener(*config.URLLIB2_HANDLERS)
+    try:
+        request = urllib2.Request(*args, **kwargs)
+        request.add_header('User-Agent', config.USER_AGENT)
+        return opener.open(request)
+    finally:
+        opener.close()
