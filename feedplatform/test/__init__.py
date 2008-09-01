@@ -129,7 +129,7 @@ def _collect_and_test(ident_dict):
     return testcustom(files, addins)
 
 
-def testcustom(files, addins=[]):
+def testcustom(files, addins=[], run=True):
     """Test a custom set of feed and file classes, using the specified
     addins.
 
@@ -156,7 +156,9 @@ def testcustom(files, addins=[]):
 
     # run the test case
     test = FeedEvolutionTest(files, addins)
-    test.run()
+    if run:
+        test.run()
+    return test
 
 
 class File(object):
@@ -217,7 +219,7 @@ class Feed(File):
 
 
 class FeedEvolutionTest(object):
-    """Represents a single test case exceution with one or many
+    """Represents a single test case excecution with one or many
     evolving feeds, i.e. a single run through multiple parsing passes.
 
     We use one instance of this to have it run exactly one test.
@@ -228,8 +230,6 @@ class FeedEvolutionTest(object):
         self.addins = addins
         self.current_pass = 0
         self.num_passes = self._determine_pass_count()
-        if self.num_passes < 1:
-            raise RuntimeError('No passes defined - nothing to test')
 
     @property
     def feeds(self):
@@ -317,6 +317,9 @@ class FeedEvolutionTest(object):
         If any test raises an exception, the test halts and is
         considered failed.
         """
+
+        if self.num_passes < 1:
+            raise RuntimeError('No passes defined - nothing to test')
 
         # If the user hasn't specified anything, we'll use a
         # memory-based sqlite database.

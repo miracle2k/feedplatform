@@ -23,8 +23,15 @@ def test_basic():
     class LocalFeed2(GlobalFeed):
         pass
 
-    feedev.testcustom([LocalFeed1])
+    testrunner = feedev.testcustom([LocalFeed1])
     assert called == 1
+
+    # we get a reference to the testrunner object back
+    assert hasattr(testrunner, 'run')
+
+    # it is possible to request the test not automatically run
+    feedev.testcustom([LocalFeed1], run=False)
+    assert called == 1  # ...so this is still 1
 
 
 def test_no_passes():
