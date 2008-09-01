@@ -80,6 +80,9 @@ def test_render_dicts():
 
     assert _get_file(TestFile)[1] == {'foo': 'bar'}
 
+    # [bug]: dict rendering must modify the original copy
+    assert TestFile.headers == {'foo': '{% <5 %}bar{% end %}'}
+
 
 def test_status_int_coercion():
     """Test that the status code may be returned as a string type.

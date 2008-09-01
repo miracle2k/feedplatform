@@ -409,6 +409,7 @@ class FeedEvolutionTest(object):
                 else:
                     return value
             if isinstance(value, dict):
+                value = value.copy()
                 for key in value:
                     value[key] = template.render(value[key], self.current_pass)
                 return value
