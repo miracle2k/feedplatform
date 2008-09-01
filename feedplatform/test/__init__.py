@@ -397,7 +397,8 @@ class FeedEvolutionTest(object):
             it is returned. Otherwise, the value is returned without
             rendering.
 
-            Note that non-string values are never rendered.
+            Note that in the case of dicts, the dict values are
+            rendered. Other non-string values are never rendered.
             """
             if callable(value):
                 value = value(self.current_pass)
@@ -407,11 +408,18 @@ class FeedEvolutionTest(object):
                         return value
                 else:
                     return value
-            if not isinstance(value, basestring):
+            if isinstance(value, dict):
+                for key in value:
+                    value[key] = template.render(value[key], self.current_pass)
+                return value
+            elif not isinstance(value, basestring):
                 return value
             return template.render(value, self.current_pass)
 
-        status = _resolve_from_feed(feed.status)
+        try:
+            status = int(_resolve_from_feed(feed.status))
+        except ValueError, e:
+            raise ValueError('status code must be a number (%s)' % e)
         headers = _resolve_from_feed(feed.headers)
         content = _resolve_from_feed(feed.content)
         return status, headers, content
