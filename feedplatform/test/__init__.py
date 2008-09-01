@@ -53,7 +53,6 @@ import os, sys
 import re
 import types
 import logging
-import operator
 import inspect
 import urllib, urllib2
 import httplib
@@ -69,6 +68,7 @@ from feedplatform import parse
 from feedplatform import db
 from feedplatform import log
 from feedplatform import addins
+from feedplatform.test import template
 
 
 __all__ = ('testmod', 'testcaller', 'testcustom', 'File', 'Feed')
@@ -363,8 +363,6 @@ class FeedEvolutionTest(object):
         finally:
             config.URLLIB2_HANDLERS = old_urllib2_handlers
 
-
-    tag_re = re.compile('{%(.*?)%}')
     def get_file(self, url):
         """Return contents of ``url``, rendered for the current
         pass.
@@ -384,90 +382,36 @@ class FeedEvolutionTest(object):
         # is required by some tests.
         feed = fs[0]
 
-        # get response code and headers
-        status = feed.status
-        headers = feed.headers
+        def _resolve_from_feed(value):
+            """Resolve a feed attribute that may also be a callable.
 
-        # Get the feed content; if it is a callable, we give it the
-        # current pass number. The result may be a string representing
-        # the template to use, or a 2-tuple in which the second value
-        # is a bool that if set to False will cause the rendering to
-        # be skipped - e.g. the first tuple value will be the final
-        # feed content for this pass.
-        content = feed.content
-        if callable(content):
-            content = content(self.current_pass)
-            if isinstance(content, (list, tuple,)):
-                content, do_render = content
-                if not do_render:
-                    return content
+            If ``value`` is not a callable, it is passed through the
+            template engine and returned.
 
-        # inline function, flow proceeds below
-        def evaluate_tag(expr):
-            """Tests ``expr`` against ``current_pass``, returns a bool.
+            Otherwise, it is given the current pass number. If the
+            return value is a 2-tuple of (content, render) where
+            ``render`` is True, then content will be rendered before
+            it is returned. Otherwise, the value is returned without
+            rendering.
 
-            Example input: 1, >1, =3, <2
+            Note that non-string values are never rendered.
             """
+            if callable(value):
+                value = value(self.current_pass)
+                if isinstance(value, (list, tuple,)):
+                    value, do_render = value
+                    if not do_render:
+                        return value
+                else:
+                    return value
+            if not isinstance(value, basestring):
+                return value
+            return template.render(value, self.current_pass)
 
-            # normalize: '\t> 5 ' => '>5'
-            expr = expr.strip().replace(' ', '')
-
-            p, v = expr[:2], expr[2:]             # two two char ops
-            if not p in ('>=', '<=',):
-                p, v = expr[:1], expr[1:]         # try one char ops
-                if not (p in '<>='):
-                    # assume now op specified, >= is the default
-                    p = '>='
-                    v = expr
-
-            # if the op is valid, the rest must be a number
-            if not v.isdigit():
-                raise ValueError("'%s' not a valid tag expression " % expr)
-
-            value = int(v)
-            ops = {'=': (operator.eq,),
-                   '>': (operator.gt,),
-                   '<': (operator.lt,),
-                   '>=': (operator.gt, operator.eq),
-                   '<=': (operator.lt, operator.eq)}[p]
-            return any([op(self.current_pass, value) for op in ops])
-
-        # render the content using our very simple template language
-        output = ""
-        is_tag = True
-        open_tags = 0
-        skipping = False
-
-        for bit in self.tag_re.split(content):
-            is_tag = not is_tag
-            token = bit.strip()
-
-            if is_tag and token == 'end':
-                open_tags -= 1
-                if open_tags < 0:
-                    raise Exception('end tag mismatch')
-                if open_tags < skipping:
-                    skipping = False
-
-            elif is_tag:
-                open_tags += 1
-                if not skipping:
-                    if not evaluate_tag(token):
-                       # skip until tag-level falls below current state
-                       # again, e.g. account for nested tags to find
-                       # the right "end", from where we'll pick it up.
-                       skipping = open_tags
-
-            elif skipping:
-                continue
-
-            else:
-                output += bit
-
-        if open_tags != 0:
-            raise Exception('not all tags closed')
-
-        return status, headers, output
+        status = _resolve_from_feed(feed.status)
+        headers = _resolve_from_feed(feed.headers)
+        content = _resolve_from_feed(feed.content)
+        return status, headers, content
 
 class MockHTTPMessage(httplib.HTTPMessage):
     """Encapsulates access to the (response) headers.
