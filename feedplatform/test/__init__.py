@@ -541,6 +541,13 @@ class MockHTTPHandler(urllib2.BaseHandler):
             # it will be captured by nose).
             print >> sys.stderr, 'ERROR: Failed to render "%s": %s' % (url, e)
             raise
+        else:
+            # HTTP responses that contain unicode object's aren't really
+            # what Univeral Feed Parser expects (lots of "Unicode equal
+            # comparison failed" to stderr).
+            if isinstance(content, unicode):
+                content = content.encode('utf8')
+
         return MockHTTPResponse(status,
             HTTP_RESPONSE_MSGS.get(status, 'Unknown'), headers, content, url)
 
