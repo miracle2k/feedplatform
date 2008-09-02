@@ -363,7 +363,7 @@ class FeedEvolutionTest(object):
                                 emsg = '%s (%s)' % (e, emsg)
                             tb = re.sub(r'(^|\n)', r'\1    ', traceback.format_exc())
                             raise Exception('Pass %d for "%s" failed: %s\n\n'
-                                'The test''s traceback was:\n%s' % (
+                                'The test traceback was:\n%s' % (
                                     self.current_pass, feed.name, emsg, tb))
         finally:
             config.URLLIB2_HANDLERS = old_urllib2_handlers
@@ -427,6 +427,7 @@ class FeedEvolutionTest(object):
         content = _resolve_from_feed(feed.content)
         return status, headers, content
 
+
 class MockHTTPMessage(httplib.HTTPMessage):
     """Encapsulates access to the (response) headers.
 
@@ -468,6 +469,7 @@ HTTP_RESPONSE_MSGS = {
     200: 'OK',
     301: 'Permanent redirect',
     302: 'Temporary redirect',
+    404: 'Not found',
 }
 
 class MockHTTPHandler(urllib2.BaseHandler):
@@ -493,6 +495,9 @@ class MockHTTPHandler(urllib2.BaseHandler):
         url = req.get_full_url()
         try:
             status, headers, content = self.store.get_file(url)
+        except KeyError, e:
+            # KeyError is meant as a 404
+            status, headers, content = 404, {}, ""
         except Exception, e:
             # Exception will be swallowed by the feedparser lib anyway,
             # try to get some attention through a message (to stderr, or
