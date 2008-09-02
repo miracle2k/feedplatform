@@ -4,6 +4,7 @@ from xml.sax import saxutils
 from feedplatform import test as feedev
 from feedplatform.lib import handle_feed_images
 from feedplatform import addins
+from feedplatform.test.mock import MockDateTime
 
 
 class image_update_counter(addins.base):
@@ -91,25 +92,11 @@ def test_update_every():
         def pass3(feed):
             assert counter.success == 2
 
-
-    class FakeDateTime(datetime.datetime):
-        delta = None
-        @classmethod
-        def modify(self, *args, **kwargs):
-            self.delta = datetime.timedelta(*args, **kwargs)
-        @classmethod
-        def utcnow(self):
-            r = super(FakeDateTime, self).utcnow()
-            if self.delta:
-                r += self.delta
-            return r
-
-    old_datetime = datetime.datetime
-    datetime.datetime = FakeDateTime
+    MockDateTime.install()
     try:
         feedev.testcaller()
     finally:
-        datetime.datetime = old_datetime
+        MockDateTime.uninstall()
 
 
 def test_restrict_extensions():
