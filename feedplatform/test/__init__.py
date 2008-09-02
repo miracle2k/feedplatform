@@ -196,6 +196,8 @@ class File(object):
                 return 200
             elif name == 'headers':
                 return {}
+            elif name == 'content':
+                return ""
             else:
                 raise AttributeError("%s" % name)
 
