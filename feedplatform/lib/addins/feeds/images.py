@@ -1,14 +1,19 @@
 """Addins that handle feed images/covers.
 
-A large part of the functionality in this module requires PIL (but
-not everything).
+Some of them require PIL.
+
+# TODO: Validate against PIL addin: The image is only processed if PIL finds
+a valid image, by looking at the headers (or optionally by fully reading
+the image?
+
+# TODO: Support updating the image when the href changes.
 """
 
-from os import path
+import os
 import datetime
 import urllib2, urlparse
 import cgi
-import cStringIO
+import cStringIO as StringIO
 
 from storm.locals import DateTime
 
@@ -21,261 +26,505 @@ from collect_feed_data import _base_data_collector
 
 __all__ = (
     'handle_feed_images',
-    'collect_feed_image_data',
+    'feed_image_restrict_frequency',
+    'feed_image_restrict_size',
+    'feed_image_restrict_extensions',
+    'feed_image_restrict_mediatypes',
     'feed_image_to_filesystem',
-    'feed_image_thumbnails',
+    #'collect_feed_image_data',
+    #'feed_image_thumbnails',
 )
 
 
-# used internally
-class _ImageTooLarge(Exception):
+class ImageError(Exception):
+    """Stop image processing.
+
+    See ``handle_feed_images`` docstring for more information on how
+    to use this exception in your addins.
+    """
     pass
 
 
-class Image(object):
-    """Represents a feed's image as passed around internally to exchange
-    data between the addins that need to deal with the image.
+class RemoteImage(object):
+    """Represents a remote feed image, by wrapping around an url, and
+    encapsulating all access to it.
 
-    Apart from holding image-related data (like mime type, file extension)
-    and thus acting as a container for it (instead of that passed along
-    through hooks separately), it's main purpose is to encapsulate access
-    to the feed image, since the best way to do this may depend on the
-    addins and options used.
+    This is passed around between the various addins dealing with feed
+    images. It holds and provides access to related metadata, as well
+    as ensuring that access is as efficient as possible.
 
-    For example, in the simpliest case, the data may just be written
-    directly from the socket to the disk. However, if we are supposed to
-    identify the image type for validation purposes, then PIL needs to
-    get involved early, and the image has to be hold in memory.
+    See, depending on the addins installed, and the data operated on,
+    we might never need to even start an HTTP request for the image.
+    Or, if validation fails early, we may not need to actually download
+    the content. Or simply reading it, without storing the information
+    may be enough, no need to hold it in memory.
+    Addins do not need to care about any of that, and what other addins
+    might have done already - rather, they just use the interface
+    exposed here.
 
-    This class takes care of all that, so that each addin doesn't have to
-    do it itself.
-
-    It also does a live validation of the images maximum size, if
-    requested, since a Content-Length header may be fake or missing.
-    Should the size exceed the limit, an exception will be raised during
-    reading from it, which the user should capture.
+    During downloading, the ``feed_image_download_chunk`` is triggered
+    for each chunk read. See the ``handle_feed_images`` addin for
+    more information on that hook.
     """
 
-    # size of chunk size to use when reading image from source
-    chunk_size = 1024
+    chunk_size = 64 * 10**2
 
-    def __init__(self, source, max_size=None):
-        self.source = source
-        self.max_size = max_size
-        self._bytes_read = 0
-
-    def _validate_size(self):
-        # validate the actual size of the file
-        if self.max_size and self._bytes_read > self.max_size:
-            raise _ImageTooLarge()
-
-    def read(self, n=-1):
-        result = self.source.read(n)
-        self._bytes_read += len(result)
-        self._validate_size()
-        return result
-
-    def tell(self):
-        return self.source.tell()
-
-    def seek(self, pos):
-        result = self.source.seek(pos)
-        self._validate_size()
-        return result
+    def __init__(self, url):
+        self.url = url
 
     @property
-    def pil_image():
-        if not hasattr(self, '_pil_image'):
-            from PIL import Image as PILImage
-            self._pil_image = PILImage(self)
+    def request(self):
+        """Access to the HTTP request object.
 
-        return self._pil_image
+        The first time this is accessed, the actual request will be made.
+        """
+        if not hasattr(self, '_request'):
+            self._request = urlopen(self.url)
+        return self._request
 
+    @property
+    def content_type(self):
+        """Return the images mime type, as indicated by the server in
+        the response headers.
 
-def _parse_http_contenttype(content_type):
-    """Takes HTTP Content-Type header and returns
-    ``(content type, charset)``.
+        May be None if the data is missing.
 
-    ``charset`` may be an empty string. If ``content type`` is None,
-    ``('', '')`` is returned.
+        Adapted from feedparser.py's ``_parseHTTPContentType``.
+        """
+        content_type = self.request.headers.get('Content-Type')
+        if not content_type:
+            return None
+        content_type, params = cgi.parse_header(content_type)
+        return content_type
 
-    Both return values are guaranteed to be lowercase strings.
+    @property
+    def content_length(self):
+        """Return the length of the image in bytes, as sent by the server
+        in the response headers.
 
-    This is adapted from feedparser.py's ``_parseHTTPContentType``.
-    """
-    content_type = content_type or ''
-    content_type, params = cgi.parse_header(content_type)
-    return content_type, params.get('charset', '').replace("'", '')
+        May be None if the data is missing.
+        """
+        length = self.request.headers.get('Content-Length')
+        if length:
+            return int(length)
+        return None
+
+    @property
+    def filename(self):
+        """The filename of the image, as extracted from the URL.
+        """
+        parsed_url = urlparse.urlparse(self.url)
+        return os.path.basename(parsed_url.path)
+
+        # Sometimes an extension is appended to the query, for example:
+        #     /image.php?id=345&name=200x200.png
+        # If that is the case, should the ``name`` completely replace
+        # the filename? What if "name=.png", without a filename?
+        ##        ext = parsed_url.query.rsplit('.', 1)
+        ##        ext = len(ext) >= 2 and ext[1] or ''
+        ##        if len(ext) > 4 or not ext.isalpha():
+        ##            ext = None
+
+    @property
+    def filename_with_ext(self):
+        """The filename, but with an extension from other sources if the
+        url itself did not contain one.
+
+        It is however possible that under certain circumstances, no
+        extension can be found.
+        """
+        filename = self.filename
+        if not os.path.splitext(filename)[1]:
+            ext = self.extension
+            if ext:
+                filename = '%s.%s' % (filename, ext)
+        return filename
+
+    @property
+    def extension_by_url(self):
+        """Determine the file extension by looking at the URL.
+
+        If the path does not include an extension, we look at the last
+        part of the querystring for one.
+        """
+        ext = os.path.splitext(self.filename)[1]
+        if ext:
+            return ext[1:]
+
+    @property
+    def extension_by_contenttype(self):
+        """Determine the file extension by the content type header.
+
+        Compares against a dict of well-known content types.
+        """
+        return {
+            'image/png': 'png',
+            'image/gif': 'gif',
+            'image/jpeg': 'jpg',
+        }.get(self.content_type, None)
+
+    @property
+    def extension_by_pil(self):
+        """Determine the file extension by looking at the actual
+        image format as detected by PIL.
+
+        # TODO: Could possibly be improved so that a full image load
+        is not required using ``PIL.ImageFile.Parser``, see also
+        ``django.core.files.images.get_image_dimensions``.
+        """
+        if self.pil:
+            return self.pil.format.lower()
+
+    @property
+    def extension(self):
+        """Return a file extension for the image, by trying different
+        things (for example, the url may not contain one).
+
+        In an unlikely, but possible scenario, None can be returned, if
+        no extension can be determined.
+        """
+        return self.extension_by_url or \
+               self.extension_by_contenttype or \
+               self.extension_by_pil or \
+               None
+
+    def _load_data(self):
+        """Download the image while yielding chunks as they are
+        incoming.
+
+        Called internally when access to the image data is needed. The
+        fact that the data is yielded live means the caller may already
+        start using it, before the download is completed.
+        """
+        # TODO: store bigger files on disk?
+        self._data = StringIO.StringIO()
+        while True:
+            chunk = self.request.read(self.chunk_size)
+            if not chunk:
+                break
+            self._data.write(chunk)
+            # HOOK: FEED_IMAGE_DOWNLOAD_CHUNK
+            hooks.trigger('feed_image_download_chunk',
+                          args=[self, self.data.tell()])
+            yield chunk
+        # reset once we initially loaded the data
+        self.data.seek(0)
+
+    @property
+    def data(self):
+        """Access the image data as a file-object.
+
+        Will cause the image to be downloaded, and stored in a
+        temporary location, if not already the case.
+        """
+        if not self.data_loaded:
+            for chunk in self._load_data():
+                pass
+        return self._data
+
+    @property
+    def data_loaded(self):
+        """Return True if the image has already been downloaded.
+
+        Check this before accessing ``data` if you want to avoid
+        unnecessary network traffic.
+        """
+        return hasattr(self, '_data')
+
+    def chunks(self):
+        """Iterator that yields the image data in chunks.
+
+        Accessing this will cause the image to be downloaded, if that
+        hasn't already happend. Chunks will be yielded as they are
+        read.
+
+        Otherwise, it iterates over the already downloaded data.
+
+        If the image is fully available in memory, it will be
+        returned as a whole (a single chunk).
+
+        TODO: The idea behind yielding chunks while they are downloaded
+        and written to a temporary storage for future access is that the
+        latter might not even be necessary. Unfortunately, we currently
+        have no way of knowing which plugins want to access chunks(), and
+        how often. We could solve this maybe by letting addins "announce"
+        what capabilities they need (using another hook), and then we
+        could decide that if chunks() is only needed once, temporary
+        storage of the data is not even necessary.
+        Until that is the case, however, the "live-yielding" of chunks we
+        currently employ has little significance, and we could just as
+        well download the image fully when first needed, and then
+        immediately give chunks from the downloaded copy at all times.
+        """
+
+        # On first access, download the image, while immediately
+        # yielding each chunk we read.
+        if not self.data_loaded:
+            for chunk in self._load_data():
+                yield chunk
+
+        # once we have the image locally, get the data from there
+        else:
+            self.data.seek(0)
+            while True:
+                # currently, _data is always a memory StringIO,
+                # no reason to read that in chunks
+                chunk = self.data.read()
+                if not chunk:
+                    break
+                yield chunk
+
+    @property
+    def pil(self):
+        """Return a PIL image.
+
+        Created on first access.
+        """
+        from PIL import Image as PILImage
+        if not self.pil_loaded:
+            self.data.seek(0)  # PIL lies in docs, does not rewind
+            try:
+                self._pil = PILImage.open(self.data)
+            except IOError, e:
+                raise ImageError('Not a valid image: %s' % e)
+
+        return self._pil
+
+    @property
+    def pil_loaded(self):
+        """Return True if a PIL image is already available.
+
+        Use this if want to avoid unnecessarily initializing a PIL
+        image, since accessing PIL will do exactly that.
+        """
+        return hasattr(self, '_pil')
+
+    def save(self, filename, format=None):
+        """Save the image to the filesystem, at the given ``filename``.
+
+        Specify ``format`` if you want to ensure a certain image format.
+        Note that this will force saving via PIL.
+
+        In other cases, PIL may be avoided completely.
+
+        TODO: In the future, this might support writing to an arbitrary
+        storage backend, rather than requiring non-filesystem addins to
+        write their own save() code?
+        """
+
+        # If a PIL image is already available, or required due to
+        # a requested format conversion, save the image through PIL.
+        if format or (self.pil_loaded and self.pil):
+            self.pil.save(filename, format)
+
+        # Otherwise write the data manually
+        else:
+            f = open(filename, 'wb')
+            try:
+                for data in self.chunks():
+                    f.write(data)
+            finally:
+                f.close()
 
 
 class handle_feed_images(addins.base):
     """The core addin for feed image handling. All other related plugins
     build on this.
 
-    It will check feeds for feed images and download them, provided they
-    match the requirements:
+    It simply checks for the existance of an image, and when found,
+    triggers a sequence of three hooks:
 
-        * ``max_size``:
-            The maximum filesize in bytes. If the image is larger than
-            this number, it will be ignored. ``None`` means no limit
-            (the default).
+        * ``feed_image``:
+            A feed image was found; This is the initial validation stage,
+            and addins may return a True value to stop further processing.
+            For example, the file extension may be validated.
 
-        * ``restrict_extensions``:
-            A tuple or list of allowed file extensions. If an image has
-            an extension not in this list, it will be ignored. The
-            extensions in the tuple should not include dots, e.g.:
-                restrict_extensions=('png','gif')
-            ``None`` means no restriction (the default).
-            # TODO: support a default list of extensions, by passing True.
+        * ``update_feed_image``:
+            At this point the image has been vetted, and addins may try
+            to process it - for example, writing it to the disk, or
+            submitting it to a remote storage service (i.e. S3).
 
-        * ``restrict_mediatypes``:
-            A tuple or list of allowed media types. If an image is sent
-            with a media type not in this list, it will be ignored.
-            ``None`` means no restriction (the default).
-            # TODO: support a default list of types, by passing True.
+        * ``feed_image_updated``:
+            The image was successfully processed. Addins may use this
+            opportunity to do clean-up work, e.g. delete temporary files,
+            mark the success in the database, store the data necessary
+            to later access the image etc.
 
-        * ``update_every``:
-            The number of seconds (or a ``timedelta`` instance) that must
-            pass since the last update of a cover, before it is updated
-            again. This is very useful to avoid having to download every
-            cover every time the feed is parsed. If you are using
-            thumbnails or other complex processing, make sure you are
-            using a restriction like this.
+    All of those hooks are passed the same arguments: The feed model
+    instance, the image_dict from the feedparser, and a ``RemoteImage``
+    instance. The latter is where the magic happens, since it encapsulates
+    all access the image for addins. For example, depending on the addins
+    installed, an HTTP request may or may not need sending, or the image
+    may or may not need downloading.
+    See ``RemoteImage`` for  more information.
 
-    The image is stored in memory or a temporary location. Via new hooks
-    provided by this addin, other addins may then proceed to do something
-    with the image, like saving it in a given filesystem structure, see
-    ``feed_image_to_filesystem`` for example.
-
-    # TODO: write in more details about the two hooks that we add, any that
-    the reason for the separation is that update_feed_image may fail.
-    implementers will also have to look out for imagetoolarge errors.
-
-    # TODO: support updating the image when the href changes. This
-    requires us to store the href, possibly by using functionality of
-    the ``store_feed_image_data`` addin?
-
-    # TODO: support overriding the actual extension with one deducted
-    from the mediatype, if available.
-    # TODO: support getting the image extension based on the file contents
-    as detected by PIL, overriding the actual extension.
+    # TODO: about error handling, and how all three hooks are in the same
+    # try-except, and therefore merely semantic differences.
+    # TODO: feed_image_download_chunk
     """
 
-    def __init__(self, max_size=None, restrict_extensions=None,
-                 restrict_mediatypes=None, update_every=None):
-        self.max_size = max_size
-        self.restrict_extensions = restrict_extensions
-        self.restrict_mediatypes = restrict_mediatypes
-        self.update_every = update_every
-
     def get_hooks(self):
-        return ('update_feed_image', 'feed_image_updated')
-
-    def get_columns(self):
-        if self.update_every:
-            return {'feed': {
-                        'image_updated': (DateTime, [], {})}
-                   }
-        else:
-            return {}
+        return ('feed_image', 'update_feed_image',
+                'feed_image_updated', 'feed_image_download_chunk',)
 
     def on_after_parse(self, feed, data_dict):
-        # if no image is available at all, skip right over this feed
+
+        # determine the image url, and bail out early if it is missing
+        image_href = None
         image_dict = data_dict.feed.get('image')
-        if not image_dict:
-            return
-        image_href = image_dict.get('href')
+        if image_dict:
+            image_href = image_dict.get('href')
         if not image_href:
             return
 
-        # enforce timed update restriction
-        if self.update_every:
-            if isinstance(self.update_every, datetime.timedelta):
-                delta = self.update_every
-            else:
-                delta = datetime.timedelta(seconds=self.update_every)
-            if feed.image_updated and (
-                    datetime.datetime.utcnow() - feed.image_updated < delta):
-                self.log.warning('Feed #%d: image was last updated'
-                        'recently enough' % (feed.id))
-                return
-
-        # TODO: possibly an early feed_image_found event here? depends
-        # on our needs when we actually solve writing needed data to
-        # the db.
-
-        # only bother downloading the image if there are actually
-        # hooks that would like to deal with it.
-        if hooks.any('update_feed_image'):
-            request = self._download(image_href, feed)
-            if request:
-                image = Image(request, self.max_size)
-                try:
-                    hooks.trigger('update_feed_image',
-                                  args=[feed, image_dict, image],
-                                  all=True)
-                except _ImageTooLarge:
-                    self.log.warning('Feed #%d: image exceeds maximum '
-                        'size of %d' % (feed.id, self.max_size))
-                else:
-                    # sine there was no error, we apparently just
-                    # sucessfully updated the image.
-                    hooks.trigger('feed_image_updated',
-                                args=[feed, image_dict, image],)
-                    if self.update_every:
-                        feed.image_updated = datetime.datetime.utcnow()
-
-    def _download(self, url, feed):
-
-        # check extension
-        if self.restrict_extensions:
-            parsed_url = urlparse.urlparse(url)
-            ext = path.splitext(parsed_url.path)[1][1:]
-            if not ext:
-                # sometimes an extension is appended to the querystring
-                # TODO: use last query string value as filename
-                ext = parsed_url.query.rsplit('.', 1)
-                ext = len(ext) >= 2 and ext[1] or ''
-                if len(ext) > 4 or not ext.isalpha():
-                    ext = None
-
-            if ext and not ext in self.restrict_extensions:
-                self.log.debug('Feed #%d: image ignored, %s is not '
-                        'an allowed file extension' % (feed.id, ext))
-                return
+        image = RemoteImage(image_href)
 
         try:
-            request = urlopen(url)
+            # HOOK: FEED_IMAGE
+            stop = hooks.trigger('feed_image', args=[feed, image_dict, image])
+            if stop:
+                return
+
+            # HOOK: UPDATE_FEED_IMAGE
+            hooks.trigger('update_feed_image',
+                          args=[feed, image_dict, image],
+                          all=True)
+
+            # HOOK: FEED_IMAGE_UPDATED
+            hooks.trigger('feed_image_updated',
+                        args=[feed, image_dict, image],)
+
         except urllib2.URLError, e:
             self.log.debug('Feed #%d: failed to download image "%s" (%s)' %
-                (feed.id, url, e))
+                (feed.id, image_href, e))
+            return
+        except ImageError, e:
+            self.log.debug('Feed #%d: error handling image "%s" (%s)' %
+                (feed.id, image_href, e))
             return
 
-        # check mediatype
-        if self.restrict_mediatypes:
-            ctype = request.headers.get('Content-Type')
-            ctype = _parse_http_contenttype(ctype)[0]
-            if ctype and not ctype in self.restrict_mediatypes:
-                self.log.debug('Feed #%d: image ignored, %s is not '
-                    'an allowed content type' % (feed.id, ctype))
-                return None
 
-        # check content-length
-        if self.max_size:
-            contentlength = request.headers.get('Content-Length')
-            if contentlength is not None and int(contentlength) > self.max_size:
-                self.log.warning('Feed #%d: image exceeds maximum '
-                    'size of %d' % (feed.id, self.max_size))
-                return None
+class feed_image_restrict_size(addins.base):
+    """Make sure the feed image does not exceed a specific size.
 
-        return request
+    ``max_size`` is specified in bytes. It is checked against both
+    the Content-Length header (if sent), and the actual number of
+    bytes downloaded.
 
-
-class collect_feed_image_data(_base_data_collector):
+    Note that the latter only happens if another plugin addin the
+    image to be downloaded fully, whereas the former will happen
+    in any case, and the inclusion of this addin will cause an
+    HTTP request to be made.
     """
-    # TODO: add a ``store_in_model`` option to use a separate model for this.
+
+    depends = (handle_feed_images,)
+
+    def __init__(self, max_size):
+        self.max_size = max_size
+
+    def _validate(self, size):
+        if size > self.max_size:
+            raise ImageError('image exceeds maximum size of %d' % self.max_size)
+
+    def on_feed_image(self, feed, image_dict, image):
+        self._validate(image.content_length)
+
+    def on_feed_image_download_chunk(self, image, bytes_read):
+        self._validate(bytes_read)
+
+
+class feed_image_restrict_frequency(addins.base):
+    """Ensures that an image is only updated every so-often.
+
+    This primarily makes sense if you download the image, and want to
+    avoid doing that everytime the feed is parsed, even though the image
+    most likely has not changed. Especially when you are doing a lot
+    of further processing (e.g. thumbnails), this is an addin you
+    probably want to use.
+
+    ``delta`` is the number of seconds that must pass since the last
+    update of the image, before it is updated again. You may also pass
+    a ``timedelta`` instance.
     """
-    pass
+
+    depends = (handle_feed_images,)
+
+    def __init__(self, delta):
+        self.delta = delta
+
+    def get_columns(self):
+        return {'feed': {'image_updated': (DateTime, [], {})}}
+
+    def on_feed_image(self, feed, image_dict, image):
+        delta = self.delta
+        if not isinstance(self.delta, datetime.timedelta):
+            delta = datetime.timedelta(seconds=self.delta)
+
+        if feed.image_updated:
+            if datetime.datetime.utcnow() - feed.image_updated < delta:
+                # stop further processing
+                self.log.warning('Feed #%d: image was last updated'
+                        'recently enough' % (feed.id))
+                return True
+
+    def on_feed_image_updated(self, feed, image_dict, image):
+        feed.image_updated = datetime.datetime.utcnow()
+
+
+class feed_image_restrict_extensions(addins.base):
+    """Restrict feed images to specific file extension.
+
+    ``allowed`` should be an iterable of extension strings, without a
+    dot prefix, e.g. ('png', 'gif'). If it is not specified, a default
+    list of extension will be used.
+
+    The extension does not necessarily need to be part of the url's
+    filename. The addin also tries to defer it from the content type
+    header, and if everything fails, the image content themselves.
+    The latter means tha the image might need to be fully downloaded
+    in some cases.
+
+    If an extension cannot be determined, i.e. if the image content is
+    invalid or in an unsupported format, it will be skipped.
+    """
+
+    depends = (handle_feed_images,)
+
+    def __init__(self, allowed=None):
+        self.allowed = allowed
+
+    def on_feed_image(self, feed, image_dict, image):
+        ext = image.extension
+        allowed = self.allowed or ('png', 'gif', 'jpg', 'jpeg',)
+        if ext and (not ext in allowed):
+            # skip further processing
+            self.log.debug('Feed #%d: image ignored, %s is not '
+                'an allowed file extension' % (feed.id, ext))
+            return True
+
+
+class feed_image_restrict_mediatypes(addins.base):
+    """Restrict feed images to specific content type headers.
+
+    ``allowed`` should be an iterable of content type strings. If it
+    is not specified, a default list of types will be used.
+
+    If a contenet type is not available, the image is always allowed.
+    """
+
+    depends = (handle_feed_images,)
+
+    def __init__(self, allowed=None):
+        self.allowed = allowed
+
+    def on_feed_image(self, feed, image_dict, image):
+        ctype = image.content_type
+        allowed = self.allowed or ('image/jpeg', 'image/png', 'image/gif',)
+        if ctype and (not ctype in allowed):
+            # skip further processing
+            self.log.debug('Feed #%d: image ignored, %s is not '
+                'an allowed content type' % (feed.id, ctype))
+            return True
 
 
 class feed_image_to_filesystem(addins.base):
@@ -295,36 +544,45 @@ class feed_image_to_filesystem(addins.base):
 
         path='/var/aggr/img/%(model)s/%(model_id)d/original.%(extension)s'
 
-    Depending on how you store the image, you later will need some #
-    information to access it. For example, in the example above, the
-    file extension is an unknown factor. If you store images with their
-    full original filename, that is what you will need to know to access
-    them. You may use the ``collect_feed_image_data`` to do this.
+    You may also pass ``path`` as a ``os.path.join``-able iterable.
 
-    Similar to this, one may create an addin that uploads the images to
-    Amazon S3, for example.
-
-    # TODO: force filetype (convert image)
+    Note that depending on how you store the image, you will later need
+    the appropriate information to access it. For example, in the example
+    above, the file extension is an unknown factor, and needs to be known
+    for access. See ``collect_feed_image_data``, which can help you with
+    this.
     """
 
     depends = (handle_feed_images,)
 
-    def __init__(self, path):
-        self.path = path
+    def __init__(self, path, format=None):
+        self.format = format
+        if not isinstance(path, basestring):
+            self.path = os.path.join(*path)
+        else:
+            self.path = path
 
     def on_update_feed_image(self, feed, image_dict, image):
         path = self.path % {
             'model': feed.__class__.__name__.lower(),
             'model_id': feed.id,
-            'filename': filename,
-            'extension': extension,
+            'filename': image.filename,
+            'extension': image.extension,
         }
-        image.save(path)
-        # TODO: how do we handle too large errors?
+        image.save(path, format=self.format)
+
+
+"""
+
+class collect_feed_image_data(_base_data_collector):
+
+    # TODO: add a ``store_in_model`` option to use a separate model for this.
+    pass
+
 
 
 class feed_image_thumbnails(addins.base):
-    """Automatically create thumbnails for feed images.
+    Automatically create thumbnails for feed images.
 
     Hooks into ``handle_feed_image`` and uses the same mechanism to
     "announce" the thumbnail images, i.e. they are saved using addins
@@ -334,7 +592,7 @@ class feed_image_thumbnails(addins.base):
     specifying the requested width/height values of the thumbnails.
 
     Requires PIL.
-    """
+
 
     depends = (handle_feed_images,)
 
@@ -348,3 +606,5 @@ class feed_image_thumbnails(addins.base):
 
     def _create_thumbnails(self):
         pass
+
+"""
