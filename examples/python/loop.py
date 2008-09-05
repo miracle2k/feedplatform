@@ -8,6 +8,8 @@ from feedplatform.conf import config
 from feedplatform import parse
 
 dbfile = path.join(path.dirname(__file__), 'test.db')
+imgpath = path.join(path.dirname(__file__), 'img')
+os.makedirs(imgpath)
 urls = [
     u'http://www.heise.de/newsticker/heise-atom.xml',
     u'http://www.obviouslyinvalid.com/feed',
@@ -23,10 +25,13 @@ urls = [
 ]
 
 def init_config():
-    from feedplatform.lib import collect_feed_data
+    from feedplatform.lib import collect_feed_data, feed_image_to_filesystem
     config.configure(**{
         'DATABASE': 'sqlite:%s' % dbfile,
-        'ADDINS': [collect_feed_data('title'),]
+        'ADDINS': [
+            collect_feed_data('title'),
+            feed_image_to_filesystem((imgpath, '%(model_id)d.%(extension)s',))
+        ]
     })
 
 def init_db():
