@@ -35,7 +35,7 @@ def simple_loop(callback=None):
         for i in xrange(0, feeds.count()):  # XXX: only do this in sqlite
             feed = feeds[i]
             counter += 1
-            update_feed(feed, {})
+            update_feed(feed)
             if do_return():
                 return
         if do_return():
