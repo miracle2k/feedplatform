@@ -399,7 +399,7 @@ class handle_feed_images(addins.base):
                 (feed.id, image_href, e))
             return
         except ImageError, e:
-            self.log.debug('Feed #%d: error handling image "%s" (%s)' %
+            self.log.warning('Feed #%d: error handling image "%s" (%s)' %
                 (feed.id, image_href, e))
             return
 
