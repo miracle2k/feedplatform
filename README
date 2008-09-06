@@ -156,6 +156,14 @@ see the docstrings in the source code of each for more information.
     * store_enclosures
     * collect_enclosure_data
     * update_redirects
+    * handle_feed_images,
+    * collect_feed_image_data,
+    * feed_image_restrict_frequency,
+    * feed_image_restrict_size,
+    * feed_image_restrict_extensions,
+    * feed_image_restrict_mediatypes,
+    * feed_image_to_filesystem,
+    * feed_image_thumbnails,
     * guid_by_content
     * guid_by_enclosure
     * guid_by_link
@@ -173,7 +181,7 @@ Your own addins
     normalization of Atom and RSS feeds. See it's documentation at:
     http://www.feedparser.org/docs/
 
-Writing an addin is hopefully pretty straightforward - while the built
+Writing an addin is hopefully pretty straightforward - while the builtin
 functionality should cover some good ground, the ultimate flexibility
 available through custom addins is what FeedPlatform was created for.
 
@@ -231,7 +239,7 @@ Configuration options
 DATABASE
 ~~~~~~~~
 
-Default: *Not available*
+Default: **Not available**
 
 A database connection string. This option is required.
 
