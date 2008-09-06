@@ -9,8 +9,8 @@ tempdir = tempfile.mkdtemp()
 
 
 def test_original_format():
-    ADDINS = [handle_feed_images,
-              feed_image_to_filesystem((tempdir, '%(model_id)s.%(extension)s'))]
+    # handle_feed_images not specified, this tests the dependency
+    ADDINS = [feed_image_to_filesystem((tempdir, '%(model_id)s.%(extension)s'))]
 
     class TestImage(feedev.File):
         content = ValidPNGImage

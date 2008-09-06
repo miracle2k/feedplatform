@@ -26,13 +26,13 @@ from collect_feed_data import _base_data_collector
 
 __all__ = (
     'handle_feed_images',
+    #'collect_feed_image_data',
     'feed_image_restrict_frequency',
     'feed_image_restrict_size',
     'feed_image_restrict_extensions',
     'feed_image_restrict_mediatypes',
     'feed_image_to_filesystem',
-    #'collect_feed_image_data',
-    #'feed_image_thumbnails',
+    'feed_image_thumbnails',
 )
 
 
@@ -527,6 +527,7 @@ class feed_image_restrict_mediatypes(addins.base):
             return True
 
 
+# TODO: rename to something storage/backend neutral
 class feed_image_to_filesystem(addins.base):
     """Will save feed images, as reported by ``handle_feed_cover`` to
     the filesystem.
@@ -562,49 +563,128 @@ class feed_image_to_filesystem(addins.base):
         else:
             self.path = path
 
-    def on_update_feed_image(self, feed, image_dict, image):
-        path = self.path % {
+    def _resolve_path(self, feed, image, extra=None):
+        vars = {
             'model': feed.__class__.__name__.lower(),
             'model_id': feed.id,
             'filename': image.filename,
             'extension': image.extension,
         }
+        if extra:
+            vars.update(extra)
+        return self.path % vars
+
+    def on_update_feed_image(self, feed, image_dict, image):
+        path = self._resolve_path(feed, image)
         image.save(path, format=self.format)
 
+
+class feed_image_thumbnails(feed_image_to_filesystem):
+    """Save thumbnail versions of feed images.
+
+    May be used instead or in combination with ``feed_image_to_filesystem``.
+
+    The required argument ``sizes`` is an iterable of 2-tuples,
+    specifying the requested width/height values of the thumbnails.
+
+    ``path`` and ``format`` work exactly like in
+    ``feed_image_to_filesystem``, but you may use these additional
+    format variables to specify the path:
+
+        d width
+        d height
+        s size (e.g. "200x200")
+
+    Requires PIL.
+    """
+
+    def __init__(self, sizes, path, format=None):
+        self.sizes = sizes
+        super(feed_image_thumbnails, self).__init__(path, format)
+
+    def on_update_feed_image(self, feed, image_dict, image):
+        for size in self.sizes:
+            path = self._resolve_path(feed, image, {
+                'width': size[0],
+                'height': size[1],
+                'size': ("%dx%d" % size),
+            })
+            thumb = make_thumbnail(image.pil, size[0], size[1], 'extend')
+            thumb.save(path, format=self.format)
 
 """
 
 class collect_feed_image_data(_base_data_collector):
 
+    url title link
+    extension
+    filename
+
     # TODO: add a ``store_in_model`` option to use a separate model for this.
     pass
 
-
-
-class feed_image_thumbnails(addins.base):
-    Automatically create thumbnails for feed images.
-
-    Hooks into ``handle_feed_image`` and uses the same mechanism to
-    "announce" the thumbnail images, i.e. they are saved using addins
-    like ``feed_image_to_filesystem``.
-
-    The required argument ``sizes`` is an iterable of 2-tuples,
-    specifying the requested width/height values of the thumbnails.
-
-    Requires PIL.
-
-
-    depends = (handle_feed_images,)
-
-    def __init__(self, sizes, typestr="thumb"):
-        pass
-
-    def on_update_cover(self, cover, secondary):
-        if secondary != "thumb":
-            for thumbnail in self._create_thumbnails():
-                trigger.update_cover(thumbnail, self.typestr)
-
-    def _create_thumbnails(self):
-        pass
-
 """
+
+
+def make_thumbnail(image, new_width, new_height, mode="crop"):
+    """Create a thumbnail of a PIL image.
+
+    Parameters:
+        * ``new_width``, ``new_height``:
+            Obviously, the wanted size of the image. Usually smaller
+            than the orginal, although both directions work.
+
+        * ``mode``:
+            Supports "crop", "extend" and "fit".
+                crop:       Keep propertions by cropping the image.
+                extend:     Keep propertions by extending the canvas.
+                fit:        Do not make an effort to keep proportions.
+
+    # TODO: mode "extend" does not support enlarging of images.
+
+    Partially based on code from this article:
+        http://batiste.dosimple.ch/blog/2007-05-13-1/
+    """
+
+    from PIL import Image
+
+    org_img = image
+
+    if mode == "crop":
+        org_width, org_height = org_img.size
+        crop_ratio = new_width / float(new_height)
+        image_ratio = org_width / float(org_height)
+        if crop_ratio < image_ratio:
+            # width needs to shrink
+            top = 0
+            bottom = org_width
+            crop_width = int(org_width * crop_ratio)
+            left = (org_width - crop_width) // 2
+            right = left + crop_width
+        else:
+            # height needs to shrink
+            left = 0
+            right = org_width
+            crop_height = int(org_width * crop_ratio)
+            top = (org_height - crop_height) // 2
+            bottom = top + crop_height
+        # actually resize the image
+        new_img = org_img.crop((left, top, right, bottom)).resize(
+            (new_width,new_height), Image.ANTIALIAS)
+
+    elif mode == "fit":
+        new_img = org_img.resize((new_width,new_height), Image.ANTIALIAS)
+
+    elif mode == 'extend':
+        # we can use the builtin function for parts of the job
+        thumb_img = org_img.copy()
+        thumb_img.thumbnail((new_width, new_height), Image.ANTIALIAS)
+        thumb_width, thumb_height = thumb_img.size
+        # extend canvas whith whitespace
+        new_img = Image.new("RGB", (new_width, new_height), "white")
+        new_img.paste(thumb_img, ((new_width-thumb_width)//2, (new_height-thumb_height)//2))
+
+    else:
+        raise Exception("'%s' is not a supported mode" % mode)
+
+    return new_img
