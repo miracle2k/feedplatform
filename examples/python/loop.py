@@ -9,7 +9,7 @@ from feedplatform import parse
 
 dbfile = path.join(path.dirname(__file__), 'test.db')
 imgpath = path.join(path.dirname(__file__), 'img')
-os.makedirs(imgpath)
+if not os.path.exists(imgpath): os.makedirs(imgpath)
 urls = [
     u'http://www.heise.de/newsticker/heise-atom.xml',
     u'http://www.obviouslyinvalid.com/feed',
@@ -44,7 +44,7 @@ def init_db():
     # create feeds that are currently missing
     for url in urls:
         if not db.store.find(models.Feed, models.Feed.url == url).count():
-            print "Adding ", url
+            print "Adding", url
             feed = models.Feed()
             feed.url = url
             db.store.add(feed)
