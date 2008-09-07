@@ -112,9 +112,11 @@ class RemoteImage(object):
     @property
     def filename(self):
         """The filename of the image, as extracted from the URL.
+
+        Can be ``None`` if path contains no filename.
         """
         parsed_url = urlparse.urlparse(self.url)
-        return os.path.basename(parsed_url.path)
+        return os.path.basename(parsed_url.path) or None
 
         # Sometimes an extension is appended to the query, for example:
         #     /image.php?id=345&name=200x200.png
@@ -134,6 +136,8 @@ class RemoteImage(object):
         extension can be found.
         """
         filename = self.filename
+        if not filename:
+            return None
         if not os.path.splitext(filename)[1]:
             ext = self.extension
             if ext:
@@ -147,7 +151,7 @@ class RemoteImage(object):
         If the path does not include an extension, we look at the last
         part of the querystring for one.
         """
-        ext = os.path.splitext(self.filename)[1]
+        ext = os.path.splitext(self.filename or '')[1]
         if ext:
             return ext[1:]
 

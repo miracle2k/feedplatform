@@ -66,11 +66,9 @@ def test_filename():
 
     class NoName(feedev.File):
         url = 'http://images/'
-        content = ValidPNGImage
         def test(image):
-            # XXX: should those really return None?
-            assert image.filename == ''
-            assert image.filename_with_ext == '.png'
+            assert image.filename == None
+            assert image.filename_with_ext == None
     _test_image(NoName)
 
 
