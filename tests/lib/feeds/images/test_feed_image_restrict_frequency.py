@@ -23,6 +23,8 @@ def test_update_every():
         def pass2(feed):
             # we're not yet updating the image again...
             assert counter.success == 1
+            # ...this also doesn't count as a failure (an existing images would be kept)
+            assert counter.failure == 0
             # ...but let's advance the clock for the next pass
             datetime.datetime.modify(seconds=30)
 

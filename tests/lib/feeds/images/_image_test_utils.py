@@ -8,10 +8,13 @@ class image_hook_counter(addins.base):
     """
     called = 0
     success = 0
+    failure = 0
     def on_update_feed_image(self, feed, image_dict, image):
         self.called += 1
     def on_feed_image_updated(self, feed, image_dict, image):
         self.success += 1
+    def on_feed_image_failed(self, feed, image_dict, image, e):
+        self.failure += 1
 
 
 class image_reader(addins.base):

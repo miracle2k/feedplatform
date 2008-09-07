@@ -63,3 +63,31 @@ def test_restrict_extensions():
             assert counter.success == 3
 
     feedev.testcaller()
+
+
+def test_failure_reset():
+    """Image fails if no valid extension (=no image).
+    """
+
+    counter = image_hook_counter()
+    ADDINS = [feed_image_restrict_extensions(('png', 'gif')), counter]
+
+    class ValidExtensionImage(feedev.File):
+        url = 'http://images/image.png'
+    class InvalidExtensionImage(feedev.File):
+        url = 'http://images/image.jpeg'
+
+    class TestFeed(feedev.Feed):
+        def content(p):
+            if p == 1:   image = ValidExtensionImage
+            elif p == 2: image = InvalidExtensionImage
+            return FeedWithImage % saxutils.escape(image.url)
+
+        def pass1(feed):
+            assert counter.failure == 0
+
+        def pass2(feed):
+            # invalid extension cause the image to fail completely
+            assert counter.failure == 1
+
+    feedev.testcaller()

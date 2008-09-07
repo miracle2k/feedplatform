@@ -21,6 +21,8 @@ def test_max_size_by_content_length():
         def pass1(feed):
             # at this point, the image is too large and is ignored
             assert counter.success == 0
+            # also, processing failed (=no image)
+            assert counter.failure == 1
 
         def pass2(feed):
             # it's been fixed, we meet the limit
@@ -47,6 +49,8 @@ def test_max_size():
         def pass1(feed):
             # at this point, the image is to large and is ignored
             assert counter.success == 0
+            # also, processing failed (=no image)
+            assert counter.failure == 1
 
         def pass2(feed):
             # it's been fixed, we meet the limit

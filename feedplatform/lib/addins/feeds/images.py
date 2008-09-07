@@ -347,10 +347,12 @@ class handle_feed_images(addins.base):
             be handled while preventing the following addins from being
             called.
 
-            In addition, for certain serious problems you may raise an
-            ``ImageError``, which basically amounts to the same thing as
-            returning True, although the exception will automatically be
-            logged.
+            Alternatively, you may raise an ``ImageError`` to stop
+            processing. The main difference, except for it automatically
+            being logged, is that the ``feed_image_failed`` hook is only
+            triggered when an exception occurs. If you problem should
+            result in possibly existing image records to be removed, you
+            want an exception.
 
         * ``update_feed_image``:
             At this point the image has been vetted, and addins may try
@@ -371,9 +373,22 @@ class handle_feed_images(addins.base):
             generally avoid doing work that could cause problems that
             could call for one.
 
-    All of those hooks are passed the same arguments: The feed model
-    instance, the image_dict from the feedparser, and a ``RemoteImage``
-    instance. The latter is where the magic happens, since it encapsulates
+        * ``feed_image_failed``:
+            While processing the image an (expected) issue was
+            encountered. This is triggered when any of the previous hooks
+            results in an ``ImageError``. Note that ``feed_image``
+            requested a processing stop will **not** trigger this.
+
+            This basically represents the "no image available, remove
+            existing data" scenario. Addins should hook into this to
+            restore the data they manage to "no image" state.
+
+    The first three  of those hooks are passed the same arguments: The
+    feed model instance, the image_dict from the feedparser, and a
+    ``RemoteImage`` instance. ``feed_image_failed`` additional receives
+    the exception instance that caused the problem.
+
+    ``RemoteImage`` is where the magic happens, since it encapsulates
     all access the image for addins. For example, depending on the addins
     installed, an HTTP request may or may not need sending, or the image
     may or may not need downloading. See ``RemoteImage`` for more
@@ -394,7 +409,8 @@ class handle_feed_images(addins.base):
 
     def get_hooks(self):
         return ('feed_image', 'update_feed_image',
-                'feed_image_updated', 'feed_image_download_chunk',)
+                'feed_image_updated', 'feed_image_failed',
+                'feed_image_download_chunk',)
 
     def on_after_parse(self, feed, data_dict):
 
@@ -423,13 +439,17 @@ class handle_feed_images(addins.base):
             hooks.trigger('feed_image_updated',
                         args=[feed, image_dict, image],)
 
-        except urllib2.URLError, e:
-            self.log.debug('Feed #%d: failed to download image "%s" (%s)' %
+        except (urllib2.URLError, ImageError), e:
+            if isinstance(e, urllib2.URLError):
+                self.log.debug('Feed #%d: failed to download image '
+                    '"%s" (%s)' % (feed.id, image_href, e))
+            elif isinstance(e, urllib2.URLError):
+                self.log.warning('Feed #%d: error handling image "%s" (%s)' %
                 (feed.id, image_href, e))
-            return
-        except ImageError, e:
-            self.log.warning('Feed #%d: error handling image "%s" (%s)' %
-                (feed.id, image_href, e))
+
+            # HOOK: FEED_IMAGE_FAILED
+            hooks.trigger('feed_image_failed',
+                        args=[feed, image_dict, image, e],)
             return
 
 
@@ -492,7 +512,7 @@ class feed_image_restrict_frequency(addins.base):
         if feed.image_updated:
             if datetime.datetime.utcnow() - feed.image_updated < delta:
                 # stop further processing
-                self.log.warning('Feed #%d: image was last updated'
+                self.log.debug('Feed #%d: image was last updated'
                         'recently enough' % (feed.id))
                 return True
 
@@ -526,10 +546,9 @@ class feed_image_restrict_extensions(addins.base):
         ext = image.extension
         allowed = self.allowed or ('png', 'gif', 'jpg', 'jpeg',)
         if ext and (not ext in allowed):
-            # skip further processing
-            self.log.debug('Feed #%d: image ignored, %s is not '
+            # no (valid) image available
+            raise ImageError('Feed #%d: image ignored, %s is not '
                 'an allowed file extension' % (feed.id, ext))
-            return True
 
 
 class feed_image_restrict_mediatypes(addins.base):
@@ -550,10 +569,9 @@ class feed_image_restrict_mediatypes(addins.base):
         ctype = image.content_type
         allowed = self.allowed or ('image/jpeg', 'image/png', 'image/gif',)
         if ctype and (not ctype in allowed):
-            # skip further processing
-            self.log.debug('Feed #%d: image ignored, %s is not '
+            # no (valid) image available
+            raise ImageError('Feed #%d: image ignored, %s is not '
                 'an allowed content type' % (feed.id, ctype))
-            return True
 
 
 class store_feed_images(addins.base):
@@ -660,7 +678,6 @@ class collect_feed_image_data(_base_data_collector):
     their rarely will be any.
 
     # TODO: add a ``store_in_model`` option to use a separate model for this.
-    # XXX: support clearing of fields if image fails
     """
 
     depends = (handle_feed_images,)
@@ -675,13 +692,19 @@ class collect_feed_image_data(_base_data_collector):
     }
 
     def _get_value(self, source_dict, source_name, target_name, image):
-        if source_name == 'extension':
-            return image.extension
-        elif source_name == 'filename':
-            return image.filename
+        if source_name in ('extension', 'filename'):
+            if not image:    # in on_feed_image_failed case
+                return None
+            if source_name == 'extension':
+                return image.extension
+            elif source_name == 'filename':
+                return image.filename
 
     def on_feed_image_updated(self, feed, image_dict, image):
         return self._process(feed, image_dict, image)
+
+    def on_feed_image_failed(self, feed, image_dict, image, exception):
+        return self._process(feed, {}, None)
 
 
 def make_thumbnail(image, new_width, new_height, mode="crop"):

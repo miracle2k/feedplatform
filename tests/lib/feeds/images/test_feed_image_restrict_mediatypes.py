@@ -30,3 +30,29 @@ def test_restrict_mediatype():
             assert counter.success == 2
 
     feedev.testcaller()
+
+
+def test_failure_reset():
+    """Image fails if no valid extension (=no image).
+    """
+
+    counter = image_hook_counter()
+    ADDINS = [feed_image_restrict_mediatypes(('image/png', 'image/gif')), counter]
+
+    class TestFeedImage(feedev.File):
+        content = ""
+        def headers(p):
+            if p == 1:   return {'Content-Type': 'image/png'}
+            elif p == 2: return {'Content-Type': 'image/jpeg'}
+
+    class TestFeed(feedev.Feed):
+        content = FeedWithImage % TestFeedImage.url
+
+        def pass1(feed):
+            assert counter.failure == 0
+
+        def pass2(feed):
+            # invalid media types cause the image to fail completely
+            assert counter.failure == 1
+
+    feedev.testcaller()
