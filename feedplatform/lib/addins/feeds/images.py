@@ -337,12 +337,24 @@ class handle_feed_images(addins.base):
         * ``feed_image``:
             A feed image was found; This is the initial validation stage,
             and addins may return a True value to stop further processing.
-            For example, the file extension may be validated.
+            For example, the file extension may be validated. An addin may
+            also explicitly return False to indicate that the image should
+            be handled while preventing the following addins from being
+            called.
+
+            In addition, for certain serious problems you may raise an
+            ``ImageError``, which basically amounts to the same thing as
+            returning True, although the exception will automatically be
+            logged.
 
         * ``update_feed_image``:
             At this point the image has been vetted, and addins may try
             to process it - for example, writing it to the disk, or
             submitting it to a remote storage service (i.e. S3).
+
+            If a problem occurs, you should raise an ``ImageError``,
+            which will stop further processing and will prevent
+            ``feed_image_updated`` from being triggered.
 
         * ``feed_image_updated``:
             The image was successfully processed. Addins may use this
@@ -350,17 +362,30 @@ class handle_feed_images(addins.base):
             mark the success in the database, store the data necessary
             to later access the image etc.
 
+            You should not raise an ``ImageError`` here, and should
+            generally avoid doing work that could cause problems that
+            could call for one.
+
     All of those hooks are passed the same arguments: The feed model
     instance, the image_dict from the feedparser, and a ``RemoteImage``
     instance. The latter is where the magic happens, since it encapsulates
     all access the image for addins. For example, depending on the addins
     installed, an HTTP request may or may not need sending, or the image
-    may or may not need downloading.
-    See ``RemoteImage`` for  more information.
+    may or may not need downloading. See ``RemoteImage`` for more
+    information.
 
-    # XXX: about error handling, and how all three hooks are in the same
-    # try-except, and therefore merely semantic differences.
-    # XXX: feed_image_download_chunk
+    Note the hints about how to handle errors in the above description.
+    Realize that the three hooks are called in direct succession, and
+    are therefore technically very much the same - the difference is
+    purely semantic. However, if you don't follow those rules there will
+    likely be issues when combined with other addins that do assume them
+    to be true.
+
+    In addition, ``RemoteImage`` itself will trigger the new
+    ``feed_image_download_chunk`` hook for every chunk of data if
+    downloads. It is passed the RemoteImage instance itself, and the bytes
+    read so far. Currently, this functionality is used by
+    ``feed_image_restrict_size`` to validate the file size.
     """
 
     def get_hooks(self):
