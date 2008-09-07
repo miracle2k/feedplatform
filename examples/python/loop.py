@@ -25,12 +25,12 @@ urls = [
 ]
 
 def init_config():
-    from feedplatform.lib import collect_feed_data, feed_image_to_filesystem
+    from feedplatform.lib import collect_feed_data, store_feed_images
     config.configure(**{
         'DATABASE': 'sqlite:%s' % dbfile,
         'ADDINS': [
             collect_feed_data('title'),
-            feed_image_to_filesystem((imgpath, '%(model_id)d.%(extension)s',))
+            store_feed_images((imgpath, '%(model_id)d.%(extension)s',))
         ]
     })
 

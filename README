@@ -156,14 +156,14 @@ see the docstrings in the source code of each for more information.
     * store_enclosures
     * collect_enclosure_data
     * update_redirects
-    * handle_feed_images,
-    * collect_feed_image_data,
-    * feed_image_restrict_frequency,
-    * feed_image_restrict_size,
-    * feed_image_restrict_extensions,
-    * feed_image_restrict_mediatypes,
-    * feed_image_to_filesystem,
-    * feed_image_thumbnails,
+    * handle_feed_images
+    * store_feed_images
+    * collect_feed_image_data
+    * feed_image_restrict_frequency
+    * feed_image_restrict_size
+    * feed_image_restrict_extensions
+    * feed_image_restrict_mediatypes
+    * feed_image_thumbnails
     * guid_by_content
     * guid_by_enclosure
     * guid_by_link

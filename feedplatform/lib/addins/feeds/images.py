@@ -27,11 +27,11 @@ from collect_feed_data import _base_data_collector
 __all__ = (
     'handle_feed_images',
     'collect_feed_image_data',
+    'store_feed_images',
     'feed_image_restrict_frequency',
     'feed_image_restrict_size',
     'feed_image_restrict_extensions',
     'feed_image_restrict_mediatypes',
-    'feed_image_to_filesystem',
     'feed_image_thumbnails',
 )
 
@@ -374,8 +374,7 @@ class handle_feed_images(addins.base):
     may or may not need downloading. See ``RemoteImage`` for more
     information.
 
-    Note the hints about how to handle errors in the above description.
-    Realize that the three hooks are called in direct succession, and
+    Note that the three hooks are called in direct succession, and
     are therefore technically very much the same - the difference is
     purely semantic. However, if you don't follow those rules there will
     likely be issues when combined with other addins that do assume them
@@ -552,8 +551,7 @@ class feed_image_restrict_mediatypes(addins.base):
             return True
 
 
-# XXX: rename to something storage/backend neutral
-class feed_image_to_filesystem(addins.base):
+class store_feed_images(addins.base):
     """Will save feed images, as reported by ``handle_feed_cover`` to
     the filesystem.
 
@@ -604,16 +602,16 @@ class feed_image_to_filesystem(addins.base):
         image.save(path, format=self.format)
 
 
-class feed_image_thumbnails(feed_image_to_filesystem):
+class feed_image_thumbnails(store_feed_images):
     """Save thumbnail versions of feed images.
 
-    May be used instead or in combination with ``feed_image_to_filesystem``.
+    May be used instead or in combination with ``store_feed_images``.
 
     The required argument ``sizes`` is an iterable of 2-tuples,
     specifying the requested width/height values of the thumbnails.
 
     ``path`` and ``format`` work exactly like in
-    ``feed_image_to_filesystem``, but you may use these additional
+    ``store_feed_images``, but you may use these additional
     format variables to specify the path:
 
         d width
@@ -651,7 +649,7 @@ class collect_feed_image_data(_base_data_collector):
 
     Note that ``extension`` and ``filename`` or in fact not directly
     taken from the feed, but rather are preprocessed. They are intended
-    to support the use of addins like ``feed_image_to_filesystem``.
+    to support the use of addins like ``store_feed_images``.
 
     Although you may specify custom fields, their use is limited, since
     their rarely will be any.

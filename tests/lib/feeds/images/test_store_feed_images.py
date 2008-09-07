@@ -1,7 +1,7 @@
 import tempfile
 from os import path
 from feedplatform import test as feedev
-from feedplatform.lib import handle_feed_images, feed_image_to_filesystem
+from feedplatform.lib import handle_feed_images, store_feed_images
 from _image_test_utils import FeedWithImage, ValidPNGImage
 
 
@@ -10,7 +10,7 @@ tempdir = tempfile.mkdtemp()
 
 def test_original_format():
     # handle_feed_images not specified, this tests the dependency
-    ADDINS = [feed_image_to_filesystem((tempdir, '%(model_id)s.%(extension)s'))]
+    ADDINS = [store_feed_images((tempdir, '%(model_id)s.%(extension)s'))]
 
     class TestImage(feedev.File):
         content = ValidPNGImage
@@ -38,7 +38,7 @@ def test_original_format():
 
 def test_force_format():
     ADDINS = [handle_feed_images,
-              feed_image_to_filesystem((tempdir, '%(model_id)s.gif'), format='gif')]
+              store_feed_images((tempdir, '%(model_id)s.gif'), format='gif')]
 
     class TestImage(feedev.File):
         content = ValidPNGImage
