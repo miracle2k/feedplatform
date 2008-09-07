@@ -15,7 +15,7 @@ import urllib2, urlparse
 import cgi
 import cStringIO as StringIO
 
-from storm.locals import DateTime
+from storm.locals import Unicode, DateTime
 
 from feedplatform import addins
 from feedplatform import db
@@ -26,7 +26,7 @@ from collect_feed_data import _base_data_collector
 
 __all__ = (
     'handle_feed_images',
-    #'collect_feed_image_data',
+    'collect_feed_image_data',
     'feed_image_restrict_frequency',
     'feed_image_restrict_size',
     'feed_image_restrict_extensions',
@@ -612,18 +612,48 @@ class feed_image_thumbnails(feed_image_to_filesystem):
             thumb = make_thumbnail(image.pil, size[0], size[1], 'extend')
             thumb.save(path, format=self.format)
 
-"""
 
 class collect_feed_image_data(_base_data_collector):
+    """Collect feed image data and store it in the feed model.
 
-    url title link
-    extension
-    filename
+    This precisely the other collectors (e.g. ``collect_feed_data``),
+    but the supported known fields are:
+
+    href, title, link, extension, filename
+
+    The model fields for each of those will be prefixed with ``image_``,
+    e.g. ``image_href``.
+
+    Note that ``extension`` and ``filename`` or in fact not directly
+    taken from the feed, but rather are preprocessed. They are intended
+    to support the use of addins like ``feed_image_to_filesystem``.
+
+    Although you may specify custom fields, their use is limited, since
+    their rarely will be any.
 
     # TODO: add a ``store_in_model`` option to use a separate model for this.
-    pass
+    # TODO: support clearing of fields if image fails
+    """
 
-"""
+    depends = (handle_feed_images,)
+
+    model_name = 'feed'
+    standard_fields = {
+        'href': {'target': 'image_href', 'field': (Unicode, (), {})},
+        'link': {'target': 'image_link', 'field': (Unicode, (), {})},
+        'title': {'target': 'image_title', 'field': (Unicode, (), {})},
+        'extension': {'target': 'image_extension', 'field': (Unicode, (), {})},
+        'filename': {'target': 'image_filename', 'field': (Unicode, (), {})},
+    }
+
+    def _get_value(self, source_dict, source_name, target_name, image):
+        if source_name == 'extension':
+            return image.extension
+        elif source_name == 'filename':
+            return image.filename
+
+    def on_feed_image_updated(self, feed, image_dict, image):
+        return self._process(feed, image_dict, image)
 
 
 def make_thumbnail(image, new_width, new_height, mode="crop"):

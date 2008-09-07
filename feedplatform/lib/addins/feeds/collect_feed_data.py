@@ -26,6 +26,18 @@ __all__ = (
 
 class _base_data_collector(addins.base):
     """Baseclass for both item and feed-level data collector addins.
+
+    Subclasses should provide at least the ``model_name`` and
+    ``standard_fields`` attributes, and may implement ``_get_value``
+    for additional processing.
+
+    ``standard_fields`` should be a dict in the form (name => field),
+    with ``field`` being a database field instance or creation tuple,
+    and name being both the model column name and the key name to use
+    when reading the value from the feed parser source dict. If you
+    want the model field name to differ from the source field, you may
+    specifiy a dict for ``field``:
+
     """
 
     # provide in subclass
@@ -48,29 +60,47 @@ class _base_data_collector(addins.base):
         # it, short of maybe raising an exception.
         self.fields.update(kwargs)
 
+        # fields may be specified as dicts or tuples: normalize
+        for name, value in self.fields.iteritems():
+            if not isinstance(value, dict):
+                self.fields[name] = {'field': value, 'target': name}
+
     def get_columns(self):
-        return {self.model_name: self.fields}
+        return {self.model_name: dict([(n, k['field'])
+                    for n, k in self.fields.iteritems()])}
 
-    def _process(self, obj, source_dict):
+    def _process(self, obj, source_dict, *args, **kwargs):
         """Call this in your respective subclass hook callback.
+
+        ``args`` and ``kwargs`` will be passed along to ``_get_value``.
         """
-        for field in self.fields:
-            # dates need to be converted to datetime
-            if self.date_fields and field in self.date_fields:
-                source_field = "%s_parsed" % field
-                new_value = struct_to_datetime(source_dict.get(source_field))
-            else:
-                new_value = self._process_field(field, source_dict.get(field))
+        for source_name, d in self.fields.iteritems():
+            target_name = d['target']
 
-            setattr(obj, field, new_value)
+            # First, let child classes handle the field, if they want.
+            # Otherwise, fall back to default; Do not handle default
+            # inside base _get_value, so that subclasses don't need to
+            # bother with super().
+            new_value = self._get_value(source_dict, source_name,
+                                    target_name, *args, **kwargs)
+            if not new_value:
+                # dates need to be converted to datetime
+                if self.date_fields and source_name in self.date_fields:
+                    source_name = "%s_parsed" % source_name
+                    new_value = struct_to_datetime(source_dict.get(source_name))
+                else:
+                    new_value = source_dict.get(source_name)
 
-    def _process_field(self, field, value):
-        """Overwrite this if some of your collector's default fields
-        need additional processing.
+            setattr(obj, target_name, new_value)
 
-        Should return the final value.
+    def _get_value(self, source_dict, source_name, target_name, *args, **kwargs):
+        """Overwrite this if some of your collector's fields need
+        additional processing.
+
+        Should return the final value, or ``None`` to let default
+        processing continue.
         """
-        return value
+        return None
 
 
 class collect_feed_data(_base_data_collector):

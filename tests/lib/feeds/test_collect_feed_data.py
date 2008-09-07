@@ -50,10 +50,11 @@ class BozoFeed(feedev.Feed):
     """
 
     def pass1(feed):
-        # because the feed is bozo (author tag missing), no data is
+        # because the feed is bozo (author tag not closed), no data is
         # being stored right now to avoid keeping invalid data. this
         # behaviour might change at some point.
         assert not feed.title
+
 
 def test():
     feedev.testmod()
