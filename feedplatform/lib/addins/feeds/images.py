@@ -204,8 +204,9 @@ class RemoteImage(object):
                 break
             self._data.write(chunk)
             # HOOK: FEED_IMAGE_DOWNLOAD_CHUNK
-            hooks.trigger('feed_image_download_chunk',
-                          args=[self, self.data.tell()])
+            if hooks.exists('feed_image_download_chunk'):
+                hooks.trigger('feed_image_download_chunk',
+                              args=[self, self.data.tell()])
             yield chunk
         # reset once we initially loaded the data
         self.data.seek(0)

@@ -29,8 +29,7 @@ def _test_image(image):
         def pass1(feed):
             image.test(RemoteImage(image.url))
 
-    # XXX: do not require handle_feed_images to test RemoteImage
-    feedev.testcustom([image, FakeFeed], addins=[handle_feed_images])
+    feedev.testcustom([image, FakeFeed])
 
 
 def test_content_type():
