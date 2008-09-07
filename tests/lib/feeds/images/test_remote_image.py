@@ -29,7 +29,7 @@ def _test_image(image):
         def pass1(feed):
             image.test(RemoteImage(image.url))
 
-    # TODO: do not require handle_feed_images to test RemoteImage
+    # XXX: do not require handle_feed_images to test RemoteImage
     feedev.testcustom([image, FakeFeed], addins=[handle_feed_images])
 
 
@@ -69,7 +69,7 @@ def test_filename():
         url = 'http://images/'
         content = ValidPNGImage
         def test(image):
-            # TODO: should those really return None?
+            # XXX: should those really return None?
             assert image.filename == ''
             assert image.filename_with_ext == '.png'
     _test_image(NoName)

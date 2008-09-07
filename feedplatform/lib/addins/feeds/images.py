@@ -358,9 +358,9 @@ class handle_feed_images(addins.base):
     may or may not need downloading.
     See ``RemoteImage`` for  more information.
 
-    # TODO: about error handling, and how all three hooks are in the same
+    # XXX: about error handling, and how all three hooks are in the same
     # try-except, and therefore merely semantic differences.
-    # TODO: feed_image_download_chunk
+    # XXX: feed_image_download_chunk
     """
 
     def get_hooks(self):
@@ -527,7 +527,7 @@ class feed_image_restrict_mediatypes(addins.base):
             return True
 
 
-# TODO: rename to something storage/backend neutral
+# XXX: rename to something storage/backend neutral
 class feed_image_to_filesystem(addins.base):
     """Will save feed images, as reported by ``handle_feed_cover`` to
     the filesystem.
@@ -632,7 +632,7 @@ class collect_feed_image_data(_base_data_collector):
     their rarely will be any.
 
     # TODO: add a ``store_in_model`` option to use a separate model for this.
-    # TODO: support clearing of fields if image fails
+    # XXX: support clearing of fields if image fails
     """
 
     depends = (handle_feed_images,)
