@@ -24,6 +24,18 @@ def test_validity():
     assert hooks.trigger('alien_invasion', [5]) == 5
 
 
+def test_exists():
+    """Test the exists() function.
+    """
+    hooks.reset()
+    assert hooks.exists('alien_invasion') == True
+    assert hooks.exists('worldpeace') == False
+    hooks.register('worldpeace')
+    assert hooks.exists('worldpeace') == True
+    hooks.reset()
+    assert hooks.exists('worldpeace') == False
+
+
 def test_any():
     """Test the any() function.
     """

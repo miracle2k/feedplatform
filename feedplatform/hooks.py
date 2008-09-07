@@ -22,6 +22,7 @@ __all__  = (
     'any',
     'trigger',
     'register',
+    'exists',
 )
 
 
@@ -202,6 +203,13 @@ def register(name):
     global SUPPORTED_HOOKS
     if not name in SUPPORTED_HOOKS:
         SUPPORTED_HOOKS.append(name)
+
+
+def exists(name):
+    """Return True if a hook name is valid, False otherwise.
+    """
+    global SUPPORTED_HOOKS
+    return name in SUPPORTED_HOOKS
 
 
 # initialize the module
