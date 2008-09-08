@@ -460,7 +460,7 @@ class feed_image_restrict_size(addins.base):
     the Content-Length header (if sent), and the actual number of
     bytes downloaded.
 
-    Note that the latter only happens if another plugin addin the
+    Note that the latter only happens if another addin causes the
     image to be downloaded fully, whereas the former will happen
     in any case, and the inclusion of this addin will cause an
     HTTP request to be made.
