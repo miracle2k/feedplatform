@@ -15,7 +15,7 @@ __all__ = (
 
 
 def struct_to_datetime(structt):
-    """Converts timestructs/9-tuples, as returned by feedparser, to
+    """Convert timestructs/9-tuples, as returned by feedparser, to
     naive, UTC-based datetime objects.
 
     See also:
@@ -28,7 +28,7 @@ def struct_to_datetime(structt):
 
 
 def datetime_to_struct(datetime):
-    """Converts a datetime object to an UTC-based 9-tuple.
+    """Convert a datetime object to an UTC-based 9-tuple.
 
     The reverse of ``struct_to_datetime``.
     """
@@ -38,7 +38,11 @@ def datetime_to_struct(datetime):
 
 
 def urlopen(*args, **kwargs):
-    """
+    """Wrapper around ``urllib2.urlopen`` that uses the handlers and user
+    agent string defined in the feedplatform configuration.
+
+    This should be used whenever network access is required as part of the
+    aggregator functionality.
     """
     opener = urllib2.build_opener(*config.URLLIB2_HANDLERS)
     try:
