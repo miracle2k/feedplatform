@@ -174,7 +174,7 @@ class Configuration(object):
         Not sure if this is the right place (it introduces a dependency
         from the config to other code, this was previously not the case),
         but it seems like the most practical.
-        Other options would include:
+        Things to take into consideration here:
 
             * Addins shouldn't do it on instantiation, since that would
               invalidate the whole ADDINS config option. Only what is
