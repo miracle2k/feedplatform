@@ -1,4 +1,4 @@
-FeedPlatform
+﻿FeedPlatform
 ============
 
 FeedPlatform implements the core functionality of a feed aggregator. It is
@@ -298,6 +298,76 @@ Default: ``()`` (Empty tuple)
 Custom handlers that will be passed to urllib2 when fetching feeds. This,
 among other things, allows you to add support for new protocols. Note that
 you then might need to update ENFORCE_URI_SCHEME as well.
+
+
+Internals
+---------
+
+Due to the requirement that FeedPlatform function without a complete, or 
+any configuration at all, and that thus modules generally be importable
+without one, some complexeties are introduced.
+
+Currently, the package module dependencies look something like this:
+
+
+    (A) .lib     (P) [configuration] 
+        ↓                  ↑  
+    (P) .db →→→→→→→→→→→→→→ ↑
+        ↑                  ↓
+        ↑           (P) .addins
+        ↑                 ↑↓ 
+    (A) .parse →→→→→→→→ .hooks  
+
+
+As you can see, ultimately everything depends on the configuration, 
+although possibly with several levels of indirection. Every module involved
+needs to make sure it uses it depenending modules in a way that delays
+requiring a configuration will as long as possible.
+
+For the sake of this elaboration, modules are marked with (A) or (P), 
+referring  to "active" and "passive" modules, respectively. 
+
+
+	* Passive modules hold module-level data that depends on the 
+	  configuration. If the configuration becomes available or changes, the
+	  modules need be updated/"reconfigured". In that case, all depending
+	  passive modules will likely need to be reconfigured as well.
+	  
+	  The fact that the configuration may not be available when the module 
+	  is loaded is one of the reasons why this module-setup procedure needs 
+	  to be  a separate step.
+	  
+
+	* In contrast, an active module may depend on the configuration, but 
+	  will never require configuration. In other words, those dependencies
+	  are not module-level global, but encapsulated in functionality the
+	  module exports. With respect to the configuration, active modules are 
+	  stateless. 
+	  
+	  For a module to be active, it needs to be written with that in mind.
+	  If it depends on any passive modules, it needs to use those so that
+	  it won't break if they are reconfigured. For example, the ``.parse``
+	  and ``.lib`` modules may not hold a reference to ``.db.models.Feed``.
+	  Rather, they need to hold a reference to ``db.models``, and access
+	  the object via ``models.Feed``, since the ``Feed`` class may be  
+	  reconstructed.
+
+
+Within the dependency tree, a module may only update it's children, i.e. the 
+modules it depends upon, not the modules that depend on it. For example, 
+``db``, when reconfigured, may also reconfigure ``addins``, however, not the
+other way around. No clear rules as to which modules propagate updates to 
+what other modules was a common source for subtle errors in the past.
+
+The relationship between ``.hooks`` and ``.addins`` is a special case, that 
+unfortunately also sort of breaks the previous principle. While on a 
+Python-level, the addin-installation process registers it's hooks, e.g. uses 
+the  ``.hooks``-module, **semantically** that module depends on the installed 
+addins. I.e. if someone using the module to trigger a hook would expect the
+addins to be registered.
+
+Currently, as a known-issue, this means that you manually need to ensure 
+that the addins are installed, before attempting to trigger hooks.			
 
 
 Testing FeedPlatform

@@ -8,8 +8,7 @@ creating an addin will be a common thing to do.
 
 Addins require an installation process to register their hooks and
 other modifiers, so that addins can be loaded and reloaded at any
-time - currently this process happens when the configuration file is
-loaded. If you change the list of addins at any point afterwards,
+time. If you change the list of addins at any point afterwards,
 use ``reinstall()`` to put it into effect.
 
 It is recommended that addins subclass ``base``, though it is not
@@ -28,7 +27,6 @@ import types
 import inspect
 from copy import copy
 from feedplatform import hooks
-from feedplatform import db
 from feedplatform import log
 from feedplatform.conf import config
 
@@ -189,7 +187,6 @@ def reinstall(addins=None):
     hooks.reset()
     for addin in to_be_setup:
         addin.setup()
-    db.reconfigure()
 
     global _ADDINS
     _ADDINS = to_be_setup

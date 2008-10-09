@@ -87,7 +87,6 @@ class LazyConfig(object):
             config = None
 
         self._target = Configuration(config)
-        self._target._apply()
 
     def configure(self, **options):
         """Manually setup the configuration.
@@ -105,7 +104,6 @@ class LazyConfig(object):
             self._target = Configuration()
         for name, value in options.items():
             setattr(self._target, name, value)
-        self._target._apply()
 
     def reset(self):
         """Reset a currently loaded configuration. On next access, a
@@ -160,45 +158,6 @@ class Configuration(object):
         for setting in dir(mod):
             if setting == setting.upper():
                 setattr(self, setting, getattr(mod, setting))
-
-    def _apply(self):
-        """Apply configuration options that cannot be resolved on demand
-        to the environment.
-
-        Right now, this means mostly ADDINS.
-
-        Due to the way addins have to register their callbacks with the
-        hook registry (e.g. they need to be installed), we need to let
-        them do just that at some point.
-
-        Not sure if this is the right place (it introduces a dependency
-        from the config to other code, this was previously not the case),
-        but it seems like the most practical.
-        Things to take into consideration here:
-
-            * Addins shouldn't do it on instantiation, since that would
-              invalidate the whole ADDINS config option. Only what is
-              listed there should be used.
-
-            * There are multiple entry points that rely on addins being
-              installed, including multiple inside the parsing code as
-              well. We don't want each of those having to take care of
-              ensuring addin installation themselves. Also, there is no
-              good way currently to check whether that installation has
-              already happened.
-
-            * Moving it to the module import level of modules that
-              contain those entry points isn't that great either - now
-              the user might have to make sure he has is imports in the
-              right order, e.g. first import config, setup the config,
-              only then import then rest.
-
-        Therefore, right now the addins are installed the first time the
-        configuration is actually loaded (remember: it's lazy loaded).
-
-        """
-        from feedplatform import addins
-        addins.install()
 
 
 config = LazyConfig()

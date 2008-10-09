@@ -1,7 +1,5 @@
 """Exposes Python logging facilities especially customized for use
 within FeedPlatform.
-
-# TODO: this could be feedplatform.test
 """
 
 import sys

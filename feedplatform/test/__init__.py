@@ -327,11 +327,10 @@ class FeedEvolutionTest(object):
         # memory-based sqlite database.
         if not (config.configured and config.DATABASE):
             config.configure(**{'DATABASE': 'sqlite:'})
-            db.reconfigure()
 
         # Remember the original handlers, so that we can *add* our
         # fake handler on each test, instead of overwriting handlers
-        # that are defined in the configration file - i.e. it is
+        # that are defined in the configuration file - i.e. it is
         # possible to run tests with additional custom handlers.
         old_urllib2_handlers = config.URLLIB2_HANDLERS
         config.URLLIB2_HANDLERS = list(old_urllib2_handlers) +\
@@ -341,6 +340,10 @@ class FeedEvolutionTest(object):
             config.ADDINS = self.addins
             addins.reinstall()
 
+            # Bring both the database definition (models) as well as
+            # the actual database (tables) up-to-date with this test's
+            # requirements.
+            db.reconfigure()
             self._initdb()
 
             for self.current_pass in range(1, self.num_passes+1):
@@ -354,7 +357,7 @@ class FeedEvolutionTest(object):
                         try:
                             testfunc(feed.dbobj)
                         except Exception, e:
-                            # re-raise the error as a new exception object
+                            # Re-raise the error as a new exception object
                             # with details about which feed/pass failed,
                             # as well as the traceback of the original
                             # exception.
