@@ -6,11 +6,21 @@ Inspired by Django's ``core.management`` module.
 import sys, os
 from optparse import OptionParser, make_option
 
+
 class CommandError(Exception):
     """Use to indicate an invalid or unknown command, or a problem with
     the command configuration, the arguments etc.
     """
-    pass
+
+class UnknownCommandError(Exception):
+    """Use to indicate the use of an invalid command name.
+
+    Makes the erroneous name available as an attribute.
+    """
+    def __init__(self, message, name):
+        CommandError.__init__(self, message)
+        self.name = name
+
 
 _commands = None
 def get_commands():
@@ -34,6 +44,7 @@ def get_commands():
             _commands = {}
     return _commands
 
+
 def get_command(name):
     """Return a command instance by name.
 
@@ -53,7 +64,7 @@ def get_command(name):
             _commands[name] = cmd  # use directly next time
             return cmd
     except KeyError:
-        raise CommandError, "Unknown command: %r" % name
+        raise UnknownCommandError("Unknown command: %r" % name, name)
 
 
 def call_command(name, *args, **options):
@@ -75,6 +86,7 @@ class LaxOptionParser(OptionParser):
     """
     def error(self, msg):
         pass
+
 
 class ManagementUtility(object):
     """Encapsulates the logic of the ``feedplatform.py`` control script.
@@ -196,6 +208,7 @@ class BaseCommand(object):
 
     def handle(self, *args, **options):
         raise NotImplementedError()
+
 
 class NoArgsCommand(BaseCommand):
     args = ''

@@ -12,6 +12,7 @@ from feedplatform.management import \
     get_commands as fp_get_commands, \
     BaseCommand as fp_BaseCommand, \
     CommandError as fp_CommandError, \
+    UnknownCommandError as fp_UnknownCommandError, \
     ManagementUtility as fp_ManagementUtility
 
 import sys, os
@@ -91,10 +92,16 @@ class Command(BaseCommand):
 
             else:
                 # forward to feedplatform handler
-                # TODO: this will currently in the case of an invalid
-                # subcommand just print "invalid command", which can be confusing
-                fp_ManagementUtility.execute_from_command_line(
-                    argv=sys.argv[:1] + [subcommand] + list(args[1:]))
+                fp_get_command(subcommand).run_from_argv(
+                    sys.argv[:1] + [subcommand] + list(args[1:]))
+
+        except fp_UnknownCommandError, e:
+            self._fail("Unknown subcommand: %s\n" %e.name)
         except fp_CommandError, e:
-            sys.stdout.write("%s\n" %e)
-            sys.exit(1)
+            self._fail("%s\n" %e)
+
+    def _fail(self, msg):
+        sys.stdout.write(msg)
+        sys.stderr.write("Type '%s feedplatform help' for usage.\n" %
+            os.path.basename(sys.argv[0]))
+        sys.exit(1)
