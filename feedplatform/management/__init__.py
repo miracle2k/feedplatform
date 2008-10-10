@@ -115,9 +115,9 @@ class ManagementUtility(object):
         parser = LaxOptionParser(option_list=BaseCommand.option_list)
         try:
             options, args = parser.parse_args(self.argv)
-            if options.settings:
+            if options.config:
                 from feedplatform.conf import ENVIRONMENT_VARIABLE
-                os.environ[ENVIRONMENT_VARIABLE] = options.settings
+                os.environ[ENVIRONMENT_VARIABLE] = options.config
             if options.pythonpath:
                 sys.path.insert(0, options.pythonpath)
         except:
