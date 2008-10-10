@@ -11,10 +11,13 @@ from feedplatform.management import \
     get_command as fp_get_command, \
     get_commands as fp_get_commands, \
     BaseCommand as fp_BaseCommand, \
-    CommandError as fp_CommandError
+    CommandError as fp_CommandError, \
+    ManagementUtility as fp_ManagementUtility
 
 import sys, os
 from django.core.management.base import BaseCommand
+from django.core.management import LaxOptionParser
+
 
 # The --config and --pythonpath options are useless when run
 # through the django integration command; the config is fixed,
@@ -33,11 +36,41 @@ def _get_command_list():
         result += '\n  %s' % command
     return result
 
+
 class Command(BaseCommand):
     help = "Gateway to the FeedPlatform management tool.\n\n" + _get_command_list()
     args = '[SUBCOMMAND]'
 
+    def create_parser(self, prog_name, subcommand):
+        # LaxOptionParser will ignore argument errors. We need this since
+        # all the options that are intended for the FeedPlatform command
+        # are not supported by this Django-wrapper command and would
+        # otherwise cause it to fail.
+        parser = super(Command, self).create_parser(prog_name, subcommand)
+        parser.__class__ = LaxOptionParser
+        return parser
+
     def handle(self, *args, **options):
+        """
+        When this is called, ``options`` will contain the valid
+        Django-level options that have been found, including those
+        potentially supported by this (Django)-command.
+
+        ``args`` contains everything else, the arguments as well as all
+        the unsupported options, which we want to give to the
+        FeedPlatform-level command. If that can't handle them either,
+        then we can raise an error.
+
+        So for example, the following call:
+
+            ./manage.py feedplatform run --daemonize --pythonpath .
+
+        results in:
+
+            args = ('run', '--daemonize')
+            options = {'pythonpath': '.', 'traceback': None, 'settings': None}
+        """
+
         try:
             subcommand = args[0]
         except IndexError:
@@ -45,6 +78,9 @@ class Command(BaseCommand):
             sys.exit(1)
 
         try:
+            # special case the "help" command, since the default version
+            # by is unaware of the wrapping and it's subcommand status and
+            # displays the "Usage: ..." line incorrectly.
             if subcommand == 'help':
                 if len(args) <= 1:
                     sys.stdout.write(_get_command_list()+"\n\n")
@@ -55,7 +91,10 @@ class Command(BaseCommand):
 
             else:
                 # forward to feedplatform handler
-                fp_call_command(subcommand, args[1:], **options)
+                # TODO: this will currently in the case of an invalid
+                # subcommand just print "invalid command", which can be confusing
+                fp_ManagementUtility.execute_from_command_line(
+                    argv=sys.argv[:1] + [subcommand] + list(args[1:]))
         except fp_CommandError, e:
             sys.stdout.write("%s\n" %e)
             sys.exit(1)
