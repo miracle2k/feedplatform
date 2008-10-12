@@ -2,6 +2,8 @@ from feedplatform.management import BaseCommand
 from feedplatform import db
 
 class Command(BaseCommand):
+    help = 'Show defined models and fields.'
+
     def handle(self, *args, **options):
         for model in db.models:
 
