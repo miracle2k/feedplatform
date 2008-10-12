@@ -47,7 +47,6 @@ Simply add FeedPlatform to your path, and make sure the following
 dependencies are available:
 
     * Storm ORM (https://storm.canonical.com/)
-    * Universal Feed Parser (http://www.feedparser.org/)
     * Pyro (http://pyro.sourceforge.net/)
 
 To use the Django integration, obviously the Django framework is
@@ -58,6 +57,16 @@ required:
 To run the tests, you will need nose:
 
     http://www.somethingaboutorange.com/mrl/projects/nose/
+
+
+Credits
+~~~~~~~
+
+In addition to the dependencies above, the following 3rd party code is
+used, but integrated into the package:
+
+    * Universal Feed Parser (http://www.feedparser.org/)
+    * daemon.py (http://www.clapper.org/software/python/daemon/)
 
 
 Tutorial
