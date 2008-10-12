@@ -11,7 +11,7 @@ __all__ = ('log', 'reset', 'get')
 ROOT_NAME = 'feedplatform'
 log = None
 
-def reset(level=logging.INFO):
+def reset(level=logging.INFO, handlers=None):
     """(Re)configure the default logger.
     """
 
@@ -24,7 +24,11 @@ def reset(level=logging.INFO):
         new_logger.removeFilter(filter)
 
     # configure
-    new_logger.addHandler(logging.StreamHandler(sys.stdout))
+    if handlers is None:
+        new_logger.addHandler(logging.StreamHandler(sys.stdout))
+    else:
+        for handler in handlers:
+            new_logger.addHandler(handler)
     new_logger.level = level
 
     # use
