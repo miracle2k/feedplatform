@@ -239,7 +239,15 @@ available as a Django management command:
 
     ./manage.py feedplatform help
     ./manage.py feedplatform models
-    ./manage.py feedplatform run --daemonize
+    ./manage.py feedplatform start --daemonize
+
+
+Additionally, you can use the ``feedplatform.integration.django.make_dsn``
+utility in your configuration to build the database connection string
+automatically based on your Django database settings:
+
+    from feedplatform.integration import django
+    DATABASE = django.make_dsn()
 
 
 Configuration options
