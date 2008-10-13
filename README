@@ -277,7 +277,7 @@ Default: ``()`` (Empty tuple)
 List any number of addins to extend, customize and specifiy the
 functionality you need.
 
-Examples:
+Example:
 
     from feedplatform.lib import *
 
@@ -286,6 +286,28 @@ Examples:
         addin2(),
         another_addin(),
     ]
+
+TABLES
+~~~~~~~~~~
+
+Default: ``{}`` (Empty dict)
+
+Allows you to map the model and field names used internally to different
+table and column names in the database, to match a desired scheme.
+
+Example:
+
+    class Feed:
+        __table__ = 'my_feeds'
+        title = 'name'
+
+    TABLES = {
+        'feed': Feed,
+    }
+
+This specifies that the table behind the ``Feed`` model shall be named
+``my_feeds``, and that it's ``title`` field is actually stored in a column
+``name``.
 
 USER_AGENT
 ~~~~~~~~~~

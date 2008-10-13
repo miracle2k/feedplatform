@@ -12,6 +12,10 @@ DATABASE = None
 # No addins are loaded.
 ADDINS = ()
 
+# Allows remapping of model and field names on the table/column level
+# to match the desired database scheme.
+TABLES = {}
+
 # User agent string when needed, e.g. HTTP interactions.
 USER_AGENT = 'FeedPlatform Python Library'
 

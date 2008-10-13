@@ -165,16 +165,32 @@ class ModelsProxy(types.ModuleType):
         # create the actual model objects
         new_models = {}
         for name, fields in blueprints.items():
+            table_options = config.TABLES.get(name)
             model_name = name.capitalize()
-            attrs = {'__storm_table__': name}
+            attrs = {'__storm_table__':
+                        getattr(table_options, '__table__', name)}
+
             for field_name, field_value in fields.items():
                 if isinstance(field_value, tuple):
                     klass, args, kwargs = field_value
                     field_value = klass(*args, **kwargs)
                 attrs[field_name] = field_value
 
+                # user may want to map this field to a custom table column
+                column_name = getattr(table_options, field_name, None)
+                if column_name:
+                    attrs[field_name]._name = column_name
+
             model = type(model_name, (Storm,), attrs)
             new_models[model_name] = model
+
+        # don't let invalid entries in config.TABLES go unnoticed
+        # XXX: the whole config.TABLES code needs testing
+        for model_name, table in config.TABLES.items():
+            model_name = model_name.capitalize()
+            if not model_name in new_models:
+                raise ValueError('Failed to process TABLES setting: '
+                    '"%s" is not a valid model name' % model_name)
 
         self._models = new_models
 
