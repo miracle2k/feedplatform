@@ -19,10 +19,12 @@ class ValidFeed(feedev.Feed):
                     {% =2 %}length="5000"{% end %}
                     {% =3 %}length=""{% end %}
                     {% =4 %}{% end %}
+                    {% =5 %}length="-1"{% end %}
+
                     {% =1 %}type="text/html"{% end %}
                     {% =2 %}type="audio/mpeg"{% end %}
                     {% =3 %}type=""{% end %}
-                    {% =4 %}{% end %}
+                    {% >4 %}{% end %}
                     href="http://example.org/files/item-1"
                 />
             </item>
@@ -49,10 +51,16 @@ class ValidFeed(feedev.Feed):
         assert enclosure.length == None
 
     def pass4(feed):
-        # or the attributes may be  missing completely
+        # or, the attributes may be  missing completely
         enclosure = feed.items.one().enclosures.one()
-        print enclosure.type
         assert enclosure.type == None
+        assert enclosure.length == None
+
+    def pass5(feed):
+        # in some rare cases feeds contain enclosures with a length
+        # value of "-1". As a convienience, the addin considers all
+        # negative length values invalid and ignores them
+        enclosure = feed.items.one().enclosures.one()
         assert enclosure.length == None
 
 

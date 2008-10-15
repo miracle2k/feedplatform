@@ -180,7 +180,10 @@ class collect_enclosure_data(_base_data_collector):
         if source_name == 'length':
             value = source_dict.get(source_name)
             try:
-                return int(value)
+                value = int(value)
+                if value <= 0:    # negative length values make no sense
+                    raise ValueError()
+                return value
             except (ValueError, TypeError):
                 # TODO: potentially log an error here (in the
                 # yet-to-be-designed error system, not just a log message)?
