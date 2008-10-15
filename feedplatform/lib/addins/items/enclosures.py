@@ -178,13 +178,16 @@ class collect_enclosure_data(_base_data_collector):
 
     def _get_value(self, source_dict, source_name, target_name, *args, **kwargs):
         if source_name == 'length':
+            value = source_dict.get(source_name)
             try:
-                return int(source_dict.get(source_name))
-            except ValueError:
+                return int(value)
+            except (ValueError, TypeError):
                 # TODO: potentially log an error here (in the
                 # yet-to-be-designed error system, not just a log message)?
                 self.log.debug('Enclosure has invalid length value: %s' % value)
                 return None
+        else:
+            return self.USE_DEFAULT
 
     def on_found_enclosure(self, enclosure, enclosure_dict):
         return self._process(enclosure, enclosure_dict)

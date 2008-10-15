@@ -699,6 +699,8 @@ class collect_feed_image_data(_base_data_collector):
                 return image.extension
             elif source_name == 'filename':
                 return image.filename
+        else:
+            return self.USE_DEFAULT
 
     def on_feed_image_updated(self, feed, image_dict, image):
         return self._process(feed, image_dict, image)

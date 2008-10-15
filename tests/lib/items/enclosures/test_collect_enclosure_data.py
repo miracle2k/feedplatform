@@ -15,8 +15,14 @@ class ValidFeed(feedev.Feed):
             <item>
                 <guid>item-1</guid>
                 <enclosure
-                    length="{% =1 %}1000{% end %}{% =2 %}5000{% end %}"
-                    type="{% =1 %}text/html{% end %}{% =2 %}audio/mpeg{% end %}"
+                    {% =1 %}length="1000"{% end %}
+                    {% =2 %}length="5000"{% end %}
+                    {% =3 %}length=""{% end %}
+                    {% =4 %}{% end %}
+                    {% =1 %}type="text/html"{% end %}
+                    {% =2 %}type="audio/mpeg"{% end %}
+                    {% =3 %}type=""{% end %}
+                    {% =4 %}{% end %}
                     href="http://example.org/files/item-1"
                 />
             </item>
@@ -34,6 +40,20 @@ class ValidFeed(feedev.Feed):
         enclosure = feed.items.one().enclosures.one()
         assert enclosure.type == 'audio/mpeg'
         assert enclosure.length == 5000
+
+    def pass3(feed):
+        # the values may also be empty (in the case of length, where
+        # a number is expected, that means invalid)
+        enclosure = feed.items.one().enclosures.one()
+        assert enclosure.type == ''
+        assert enclosure.length == None
+
+    def pass4(feed):
+        # or the attributes may be  missing completely
+        enclosure = feed.items.one().enclosures.one()
+        print enclosure.type
+        assert enclosure.type == None
+        assert enclosure.length == None
 
 
 class BozoFeed(feedev.Feed):

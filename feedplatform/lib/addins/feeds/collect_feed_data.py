@@ -37,8 +37,9 @@ class _base_data_collector(addins.base):
     when reading the value from the feed parser source dict. If you
     want the model field name to differ from the source field, you may
     specifiy a dict for ``field``:
-
     """
+
+    USE_DEFAULT = object()
 
     # provide in subclass
     model_name = None
@@ -83,7 +84,7 @@ class _base_data_collector(addins.base):
             # bother with super().
             new_value = self._get_value(source_dict, source_name,
                                     target_name, *args, **kwargs)
-            if not new_value:
+            if new_value is self.USE_DEFAULT:
                 # dates need to be converted to datetime
                 if self.date_fields and source_name in self.date_fields:
                     source_name = "%s_parsed" % source_name
@@ -97,10 +98,10 @@ class _base_data_collector(addins.base):
         """Overwrite this if some of your collector's fields need
         additional processing.
 
-        Should return the final value, or ``None`` to let default
-        processing continue.
+        Should return the final value, or ``self.USE_DEFAULT`` to let
+        default processing continue.
         """
-        return None
+        return self.USE_DEFAULT
 
 
 class collect_feed_data(_base_data_collector):
