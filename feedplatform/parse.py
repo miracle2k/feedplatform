@@ -97,6 +97,12 @@ def update_feed(feed):
     # ACTION: HANDLE ITEMS
     for entry_dict in data_dict.entries:
 
+        # HOOK: ITEM
+        stop = hooks.trigger('item', args=[feed, data_dict, entry_dict])
+        if stop:
+            log.debug('Feed #%d: Item was skipped by addin' % (feed.id))
+            return
+
         # ACTION: DETERMINE GUID; HOOKS: GET_GUID, NEED_GUID
         #
         # Determine a unique id for the item; this is one of the

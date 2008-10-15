@@ -48,6 +48,11 @@ _DEFAULT_HOOKS = [
     # depends on how error handling is going to work.
     'after_parse',
 
+    # The first thing that runs for every entry in
+    # a feed; can return True to stop processing
+    # of this entry.
+    'item',
+
     # Determine item guid BEFORE the default
     # <guid> tag is chosen.
     'get_guid',
