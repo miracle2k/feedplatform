@@ -5,6 +5,7 @@ enclosure and doesn't rely on a separate table, but rather fields
 in the item table might be nice.
 """
 
+import datetime
 from storm.locals import Unicode, Int, Reference, ReferenceSet
 
 from feedplatform import addins
@@ -162,7 +163,13 @@ class collect_enclosure_data(_base_data_collector):
     This works precisely like ``collect_feed_data``, except that
     the supported known fields are:
 
-    length, type
+    length, type, duration
+
+    The duration is stored as an integer, in seconds. Note that this is
+    a special case: The duration is read from the ``itunes:duration`` tag,
+    which is actually item-level, since the iTunes spec doesn't support
+    multiple enclosures. If an item has multiple multiple enclosures, the
+    item's duration value will be applied to every enclosure.
 
     Although you may specify custom fields, their use is limited, since
     their rarely will be any.
@@ -174,9 +181,11 @@ class collect_enclosure_data(_base_data_collector):
     standard_fields = {
         'length': (Int, (), {}),
         'type': (Unicode, (), {}),
+        'duration': (Int, (), {}),
     }
 
     def _get_value(self, source_dict, source_name, target_name, *args, **kwargs):
+        # length needs to be converted to an int
         if source_name == 'length':
             value = source_dict.get(source_name)
             try:
@@ -184,11 +193,16 @@ class collect_enclosure_data(_base_data_collector):
                 if value <= 0:    # negative length values make no sense
                     raise ValueError()
                 return value
-            except (ValueError, TypeError):
+            except (ValueError, TypeError):  # TODO: instead of catching TypeError (for None), don't even log a warning in this case
                 # TODO: potentially log an error here (in the
                 # yet-to-be-designed error system, not just a log message)?
                 self.log.debug('Enclosure has invalid length value: %s' % value)
                 return None
+
+        # duration needs to be read from the item level
+        elif source_name == 'duration':
+            return self.itunes_duration_value
+
         else:
             return self.USE_DEFAULT
 
@@ -197,3 +211,33 @@ class collect_enclosure_data(_base_data_collector):
 
     def on_new_enclosure(self, enclosure, enclosure_dict):
         return self._process(enclosure, enclosure_dict)
+
+    def on_item(self, feed, data_dict, entry_dict):
+        # duration is read from the item, and applied on an
+        # enclosure-level; but only bother if it the duration
+        # actually requested.
+        if 'duration' in self.fields:
+            value = entry_dict.get('itunes_duration')
+            self.itunes_duration_value = \
+                self._parse_duration(value) if value else None
+
+    def _parse_duration(self, value):
+        try:
+            bits = map(int, value.split(':'))
+        except ValueError:
+            self.log.debug('Item has invalid "itunes:duration" value: %s' % value)
+            return None
+        else:
+            if len(bits) >= 3:
+                result = datetime.timedelta(hours=bits[0],
+                                            minutes=bits[1],
+                                            seconds=bits[2])
+            elif len(bits) == 2:
+                result = datetime.timedelta(minutes=bits[0],
+                                            seconds=bits[1])
+            elif len(bits) == 1:
+                result = datetime.timedelta(seconds=bits[0])
+
+            if result.days < 0:  # disallow negative duration values
+                return None
+            return result.seconds
