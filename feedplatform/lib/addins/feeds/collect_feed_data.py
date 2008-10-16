@@ -37,6 +37,8 @@ class _base_data_collector(addins.base):
     when reading the value from the feed parser source dict. If you
     want the model field name to differ from the source field, you may
     specifiy a dict for ``field``:
+
+        'href': {'target': 'image_href', 'field': (Unicode, (), {})}
     """
 
     USE_DEFAULT = object()
