@@ -69,7 +69,7 @@ class _base_data_collector(addins.base):
                 self.fields[name] = {'field': value, 'target': name}
 
     def get_columns(self):
-        return {self.model_name: dict([(n, k['field'])
+        return {self.model_name: dict([(k['target'], k['field'])
                     for n, k in self.fields.iteritems()])}
 
     def _process(self, obj, source_dict, *args, **kwargs):

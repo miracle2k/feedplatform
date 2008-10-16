@@ -1,6 +1,7 @@
 from storm.locals import Unicode
 from feedplatform import test as feedev
 from feedplatform import addins
+from feedplatform import db
 from feedplatform.lib import collect_feed_image_data
 from feedplatform.lib.addins.feeds.images import ImageError
 
@@ -10,7 +11,6 @@ def test_basic():
         # some unicode fields, both "special" generated fields
         collect_feed_image_data('href', 'title', 'extension', 'filename')
     ]
-
 
     class TestFeed(feedev.Feed):
         content = """
@@ -35,6 +35,13 @@ def test_basic():
             assert feed.image_href == 'http://example.org/blog/image.jpg'
             assert feed.image_extension == 'jpg'
             assert feed.image_filename == 'image.jpg'
+
+            # [bug] Ensure those fields we are checking are actually,
+            # really, model fields, avaible in the database, not just
+            # attributes, while the real fields are using their standard
+            # name (i.e. "title" instead of "image_title").
+            assert 'image_title' in [c._detect_attr_name(feed.__class__)
+                                     for c in feed._storm_columns.keys()]
 
         def pass2(feed):
             # changed values are picked up
