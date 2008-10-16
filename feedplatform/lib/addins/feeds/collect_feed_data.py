@@ -114,8 +114,8 @@ class collect_feed_data(_base_data_collector):
 
         collect_feed_data(*known_fields, **custom_fields)
 
-    Known fields currently include title, subtitle, summary, language,
-    updated, modified.
+    Known fields currently include title, subtitle, summary, link,
+    language, updated, modified.
 
     Using custom fields, you can read any field you want, but you
     need to specify a datatype for the database field.
@@ -137,6 +137,7 @@ class collect_feed_data(_base_data_collector):
         'title': (Unicode, (), {}),
         'subtitle': (Unicode, (), {}),
         'summary': (Unicode, (), {}),
+        'link': (Unicode, (), {}),
         'language': (Unicode, (), {}),
         'updated': (DateTime, (), {}),
         'published': (DateTime, (), {}),
