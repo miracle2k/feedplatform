@@ -188,16 +188,19 @@ class collect_enclosure_data(_base_data_collector):
         # length needs to be converted to an int
         if source_name == 'length':
             value = source_dict.get(source_name)
-            try:
-                value = int(value)
-                if value <= 0:    # negative length values make no sense
-                    raise ValueError()
-                return value
-            except (ValueError, TypeError):  # TODO: instead of catching TypeError (for None), don't even log a warning in this case
-                # TODO: potentially log an error here (in the
-                # yet-to-be-designed error system, not just a log message)?
-                self.log.debug('Enclosure has invalid length value: %s' % value)
+            if not value:
                 return None
+            else:
+                try:
+                    value = int(value)
+                    if value <= 0:    # negative length values make no sense
+                        raise ValueError()
+                    return value
+                except ValueError:
+                    # TODO: potentially log an error here (in the
+                    # yet-to-be-designed error system, not just a log message)?
+                    self.log.debug('Enclosure has invalid length value: %s' % value)
+                    return None
 
         # duration needs to be read from the item level
         elif source_name == 'duration':
