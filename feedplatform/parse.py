@@ -101,7 +101,7 @@ def update_feed(feed):
         stop = hooks.trigger('item', args=[feed, data_dict, entry_dict])
         if stop:
             log.debug('Feed #%d: Item was skipped by addin' % (feed.id))
-            return
+            continue
 
         # ACTION: DETERMINE GUID; HOOKS: GET_GUID, NEED_GUID
         #
