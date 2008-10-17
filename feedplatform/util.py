@@ -11,6 +11,8 @@ from feedplatform.conf import config
 __all__ = (
     'struct_to_datetime',
     'datetime_to_struct',
+    'to_unicode',
+    'urlopen' ,
 )
 
 
@@ -35,6 +37,20 @@ def datetime_to_struct(datetime):
     if not datetime:
         return datetime
     return datetime.utctimetuple()
+
+
+def to_unicode(s):
+    """Convert ``s`` to a unicode object if not None.
+
+    This is helpful in scenarios where you want to assign to a nullable
+    Storm ``Unicode`` column (Storm enforces a unicode string type),
+    without checking the source for a ``None`` value manually.
+    """
+
+    if s is None or isinstance(s, unicode):
+        return s
+    else:
+        return unicode(s)
 
 
 def urlopen(*args, **kwargs):
