@@ -5,6 +5,7 @@ The Storm ORM is used as the backend.
 """
 
 import sys
+import re
 import copy
 
 from storm.locals import *
@@ -49,6 +50,30 @@ def get_one(result):
     else:
         return result
 
+
+def cap_model_name(name):
+    """Capitalize a model name (model_name => ModelName).
+
+    >>> cap_model_name('feed')
+    'Feed'
+    >>> cap_model_name('http_info')
+    'HttpInfo'
+    """
+    def repl(m):
+        return m.groups()[0].capitalize()
+    return cap_model_name.expr.sub(repl, name)
+cap_model_name.expr = re.compile(r'(?:^|_)(\w)')
+
+def uncap_model_name(name):
+    """Uncapitalize a model name (ModelName => model_name).
+
+    >>> cap_model_name('Feed')
+    'feed'
+    >>> cap_model_name('HttpInfo')
+    'http_info'
+    """
+    return uncap_model_name.expr.sub('_\\1', name).lower()
+uncap_model_name.expr = re.compile(r'(?<!^)(((?<=[a-z])[A-Z])|([A-Z](?![A-Z]|$)))')
 
 # dynamically constructed during module setup
 database = None
@@ -166,7 +191,7 @@ class ModelsProxy(types.ModuleType):
         new_models = {}
         for name, fields in blueprints.items():
             table_options = config.TABLES.get(name)
-            model_name = name.capitalize()
+            model_name = cap_model_name(name)
             attrs = {'__storm_table__':
                         getattr(table_options, '__table__', name)}
 
@@ -187,7 +212,7 @@ class ModelsProxy(types.ModuleType):
         # don't let invalid entries in config.TABLES go unnoticed
         # XXX: the whole config.TABLES code needs testing
         for model_name, table in config.TABLES.items():
-            model_name = model_name.capitalize()
+            model_name = cap_model_name(model_name)
             if not model_name in new_models:
                 raise ValueError('Failed to process TABLES setting: '
                     '"%s" is not a valid model name' % model_name)
