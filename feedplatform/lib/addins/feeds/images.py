@@ -620,8 +620,14 @@ class store_feed_images(addins.base):
             vars.update(extra)
         return self.path % vars
 
+    def _ensure_directories(self, path):
+        base = os.path.dirname(path)
+        if not os.path.exists(base):
+            os.makedirs(base)
+
     def on_update_feed_image(self, feed, image_dict, image):
         path = self._resolve_path(feed, image)
+        self._ensure_directories(path)
         image.save(path, format=self.format)
 
 
@@ -655,6 +661,7 @@ class feed_image_thumbnails(store_feed_images):
                 'height': size[1],
                 'size': ("%dx%d" % size),
             })
+            self._ensure_directories(path)
             thumb = make_thumbnail(image.pil, size[0], size[1], 'extend')
             thumb.save(path, format=self.format)
 
@@ -662,8 +669,8 @@ class feed_image_thumbnails(store_feed_images):
 class collect_feed_image_data(_base_data_collector):
     """Collect feed image data and store it in the feed model.
 
-    This precisely the other collectors (e.g. ``collect_feed_data``),
-    but the supported known fields are:
+    This works precisely like the other collectors (e.g.
+    ``collect_feed_data``), but the supported known fields are:
 
     href, title, link, extension, filename
 
