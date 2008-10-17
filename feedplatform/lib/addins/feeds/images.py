@@ -443,7 +443,7 @@ class handle_feed_images(addins.base):
             if isinstance(e, urllib2.URLError):
                 self.log.debug('Feed #%d: failed to download image '
                     '"%s" (%s)' % (feed.id, image_href, e))
-            elif isinstance(e, urllib2.URLError):
+            elif isinstance(e, ImageError):
                 self.log.warning('Feed #%d: error handling image "%s" (%s)' %
                 (feed.id, image_href, e))
 
