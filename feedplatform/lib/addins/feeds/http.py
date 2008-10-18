@@ -136,12 +136,12 @@ class save_bandwith(addins.base):
         if self.custom_storage:
             return {}
         else:
-            return {
-                'feed': {
-                    'http_etag': (Unicode, (), {}),
-                    'http_modified': (DateTime, (), {}),
-                }
-            }
+            fields = {}
+            if self.etag:
+                fields.update({'http_etag': (Unicode, (), {})})
+            if self.modified:
+                fields.update({'http_modified': (DateTime, (), {})})
+            return {'feed': fields}
 
     def on_before_parse(self, feed, parser_args):
         if self.etag:

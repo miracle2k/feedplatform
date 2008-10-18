@@ -7,6 +7,24 @@ from feedplatform.db import models
 from feedplatform.util import struct_to_datetime, to_unicode
 
 
+def test_available_fields():
+    # [bug] make sure that depending on the option only the model
+    # fields that are actually necessary are created.
+    #
+    # Note that we assert both that one field does not exists AND
+    # the that another exists. This will hopefully catch cases
+    # were the test might become invalid if the addin changes it's
+    # field names and the negative assert would always be True.
+
+    addin = save_bandwith(etag=False)
+    assert not 'http_etag' in addin.get_columns()['feed']
+    assert 'http_modified' in addin.get_columns()['feed']
+
+    addin = save_bandwith(modified=False)
+    assert not 'http_modified' in addin.get_columns()['feed']
+    assert 'http_etag' in addin.get_columns()['feed']
+
+
 def test(*args, **kwargs):
     _run_test(etag=True, modified=True, *args, **kwargs)
     _run_test(etag=False, modified=True, *args, **kwargs)
