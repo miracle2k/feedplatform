@@ -8,8 +8,6 @@ The management tools and parsing scripts exposed to the user depend
 on this code.
 """
 
-from hashlib import md5
-
 from feedplatform.deps import feedparser
 from feedplatform import hooks
 from feedplatform.log import log
