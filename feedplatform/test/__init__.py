@@ -457,21 +457,27 @@ class MockHTTPResponse(urllib.addinfourl):
     initialized with the caller's custom data.
 
     Inherits from ``addinfourl`` but adds the capability to initialize
-    using a string, instead of requiring a file-like object. It also adds
-    the attributes required by urllib2's HTTP processing (eg.``code``).
+    the content from a string, instead of requiring a file-like object,
+    and the headers from a dict.
+
+    It also adds the attributes required by urllib2's HTTP
+    processing (e.g.``code``).
     """
     def __init__(self, code, msg, headers, data, url):
         if isinstance(data, basestring):
             data = StringIO.StringIO(data)
-        urllib.addinfourl.__init__(self, data, MockHTTPMessage(headers), url)
+        if not isinstance(headers, httplib.HTTPMessage):
+            headers = MockHTTPMessage(headers)
+        urllib.addinfourl.__init__(self, data, headers, url)
 
         self.code, self.msg = code, msg
 
-# just to be extra nice, in reality the message doesn't matter
+# just to be extra authentic, in reality the message doesn't matter
 HTTP_RESPONSE_MSGS = {
     200: 'OK',
     301: 'Permanent redirect',
     302: 'Temporary redirect',
+    304: 'Not modified',
     404: 'Not found',
 }
 
@@ -508,6 +514,12 @@ class MockHTTPHandler(urllib2.BaseHandler):
             print >> sys.stderr, 'ERROR: Failed to render "%s": %s' % (url, e)
             raise
         else:
+            headers = MockHTTPMessage(headers)
+
+            # handle 304 headers
+            if self.check_304(headers, MockHTTPMessage(req.headers)):
+                status, headers, content = 304, headers, ""
+
             # HTTP responses that contain unicode object's aren't really
             # what Univeral Feed Parser expects (lots of "Unicode equal
             # comparison failed" to stderr).
@@ -517,46 +529,53 @@ class MockHTTPHandler(urllib2.BaseHandler):
         return MockHTTPResponse(status,
             HTTP_RESPONSE_MSGS.get(status, 'Unknown'), headers, content, url)
 
-    """def handle304Response(self, lmod, etag):
-        ""
-        From: http://midtoad.homelinux.org/FrogComplete/snakeserver/server.py
-        Checks and handles the if-modified-since and etag headers
-        If the check is positive (i.e. the resource is NOT modified),
-        returns a 304 status and True ("handled").
-        Otherwise, does nothing, and returns False ("not handled").
-        ""
-        IfModifiedSince = self.headers.get("If-Modified-Since", "")
-        IfNoneMatch = self.headers.get("If-None-Match", "")
-        IfMatch = self.headers.get("If-Match", "")
-        if IfModifiedSince:
-            # strip off IE-shit
-            index = IfModifiedSince.find(';')
-            if index >= 0:
-                IfModifiedSince = IfModifiedSince[:index]
-            # check lmod
-            if lmod != IfModifiedSince:
-                return False
-        elif IfNoneMatch or IfMatch:
-            # check if-none-match
-            if IfNoneMatch and IfNoneMatch != '*':
-                if etag not in [tag.strip() for tag in IfNoneMatch.split(',')]:
-                    return False
-            # check if-match
-            if IfMatch:
-                if IfMatch == '*' or etag in [tag.strip() for tag in IfMatch.split(',')]:
-                    return False
-        else:
-            return False  # no 304 relevant header in use
-        # resource wasn't modified, so return 304 not modified.
-        self.send_response(304)
-        self.end_headers()
-        return True
+    def check_304(self, res_headers, req_headers):
+        """Determines if a 304 Not Modified response code should be sent,
+        by simply comparing the resource and request headers (
+        ``res_headers`` and ``req_headers``, respectively).
 
-        if not self.handle304Response(headers.get('Last-Modified'), headers.get('Etag')):
-            # otherwise, send "normal" response
-            if status: self.send_response(*status)
-            else: self.send_response(200, 'OK')
-            for key, value in headers.items():
-                self.send_header(key, value)
-            self.end_headers()
-            self.wfile.write("\n".join(data))"""
+        Returns ``True`` if a 304 response should be sent.
+
+        Supports both the etag and last-modified mechanisms. The latter
+        one is based on a simple string comparison, rather than a true
+        date comparison.
+
+        Originally based on code from:
+            http://midtoad.homelinux.org/FrogComplete/snakeserver/server.py
+
+        """
+        etag = res_headers.get('etag')
+        last_modified = res_headers.get('last-modified')
+
+        if_modified_since = req_headers.getheader("if-modified-since")
+        if_none_match = req_headers.getheader("if-none-match")
+        if_match = req_headers.getheader("if-match")
+
+        #print etag, last_modified
+        #print if_modified_since, if_none_match, if_match
+
+        if not (if_modified_since or if_none_match or if_match):
+            # no 304 relevant header in use
+            return False
+
+        else:
+            if if_modified_since:
+                # strip off IE-shit
+                index = if_modified_since.find(';')
+                if index >= 0:
+                    if_modified_since = if_modified_since[:index]
+
+                if last_modified != if_modified_since:
+                    return False
+
+            if if_none_match and if_none_match != '*':
+                tags = [tag.strip() for tag in if_none_match.split(',')]
+                if etag not in tags:
+                    return False
+
+            if if_match:
+                tags = [tag.strip() for tag in if_match.split(',')]
+                if if_match == '*' or etag in tags:
+                    return False
+
+            return True

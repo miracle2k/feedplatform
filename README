@@ -177,6 +177,7 @@ see the docstrings in the source code of each for more information.
     * guid_by_enclosure
     * guid_by_link
     * guid_by_date
+    * save_bandwith
 
 
 Your own addins
@@ -506,7 +507,6 @@ TODO:
       to be updated, but do not write to database).
     - management command to dump out a default config file
     - addin to use python-dateutil for more robust date support
-    - addin to enable bandwith-saving measures like etags
     - addin to download favicons
     - addin to prioritize parsing, so that feeds that update frequently are
       also checked more frequently.

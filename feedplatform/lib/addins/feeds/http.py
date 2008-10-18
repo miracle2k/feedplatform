@@ -1,12 +1,17 @@
 """Addins that relate to HTTP functionality.
 """
 
+from storm.locals import DateTime, Unicode
+
 from feedplatform import addins
 from feedplatform import db
+from feedplatform.util import \
+    datetime_to_struct, struct_to_datetime, to_unicode
 
 
 __all__ = (
     'update_redirects',
+    'save_bandwith',
 )
 
 
@@ -101,3 +106,63 @@ class update_redirects(addins.base):
     def _force(self, feed, new_url, dup_feeds):
         self.log.info('Redirect target already exists: changing to new url anyway')
         feed.url = new_url
+
+
+class save_bandwith(addins.base):
+    """Use the HTTP ETag and Last-Modified headers to download and parse
+    a feed only if the server confirms that it has indeed changed since
+    the last time we requested it.
+
+    You may choose to use only one of the mechanisms (etag or
+    last-modified) by using the ``etag`` and ``modified`` arguments to
+    the constructor.
+
+    Additionally, you can subclass this addin if you want to store the
+    http information differently. You may want to enable the
+    ``custom_storage`` attribute of your class in this case, which will
+    restrain the addin from accessing the default fields. Instead, it
+    is then expected that you manually make sure that the ``etag`` and
+    ``last-modified`` are stored somewhere, and you will have to
+    overwrite ``_get_etag`` and ``_get_modified`` to provide them when
+    needed.
+    """
+
+    custom_storage = False
+
+    def __init__(self, etag=True, modified=True):
+        self.etag, self.modified = etag, modified
+
+    def get_columns(self):
+        if self.custom_storage:
+            return {}
+        else:
+            return {
+                'feed': {
+                    'http_etag': (Unicode, (), {}),
+                    'http_modified': (DateTime, (), {}),
+                }
+            }
+
+    def on_before_parse(self, feed, parser_args):
+        if self.etag:
+            parser_args['etag'] = self._get_etag(feed)
+        if self.modified:
+            parser_args['modified'] = datetime_to_struct(self._get_modified(feed))
+
+    def on_after_parse(self, feed, data_dict):
+        if data_dict.get('status') == 304:
+            self.log.debug("Feed #%d: Not changed since last update ("
+                "status 304 returned)" % feed.id)
+            return True
+
+        if not self.custom_storage:
+            feed.http_etag = to_unicode(data_dict.get('etag'))
+            feed.http_modified = struct_to_datetime(data_dict.get('modified'))
+
+    def _get_etag(self, feed):
+        if not self.custom_storage:
+            return feed.http_etag
+
+    def _get_modified(self, feed):
+        if not self.custom_storage:
+            return feed.http_modified
