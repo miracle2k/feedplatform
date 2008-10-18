@@ -93,6 +93,7 @@ unmodified by a config file::
     Feed
         id: Int
         url: Unicode
+
     Item
         feed_id: Int
         guid: Unicode
@@ -115,34 +116,63 @@ If you have *myapp* on your path, you can also say:
 
     FEEDPLATFORM_CONFIG_MODULE = 'maypp.aggregator.config'
 
-Create this file, and put this in there:
+Create this file, and put the following in there:
 
-{{{
-MODELS = {
-    'feed':[collect_data()],
-    'item': [collect_item_data()],
-}
-}}}
-# TODO: Replace with correct addin names and syntax
+    from feedplatform.lib import *
+
+    ADDINS = [
+        collect_feed_data('title')
+        collect_item_data('title', 'summary')
+    ]
 
 .. note:: In the future, you may use ``feedplatform new-config`` to
 generate a new configuration file based on a easier to use template.
 
-This will collect a default set of data, but you could specify this
-further, e.g.
-
-    collect_data("title", "description"])
-    # TODO: Replace with correct addin names and syntax
+This will store the feed's title, and the title and description of each
+entry in the feed. If the values change in the source, those addins
+will also make sure that those changes are picked up as well the next
+time a feed is looked at.
 
 Now let's see how our models have changed:
 
     $ set FEEDPLATFORM_CONFIG = '~/myconfig.py'
-    $ feedplatform models
-    # TODO: add actual output here
+    $ feedplatform.py models
+    Feed
+        id: Int
+        title: Unicode
+        url: Unicode
 
-As you can see, both tables have a bunch of new fields.
+    Item
+        guid: Unicode
+        feed_id: Int
+        title: Unicode
+        summary: Unicode
+        id: Int
 
-# TODO: Give another example using the enclosures addin
+As you can see, both tables have a couple of new fields.
+
+Let's say we are also interested in enclosures that may be attached to
+items. Simply change your configuration and add another addin:
+
+    ADDINS = [
+        ...,
+        store_enclosures,
+    ]
+
+Run the ``models`` command again:
+
+    $ feedplatform.py models
+    Feed
+        ...
+
+    Item
+        ...
+
+    Enclosure
+        href: Unicode
+        item_id: Int
+        id: Int
+
 
 # TODO: Explain running the daemon
 
@@ -511,3 +541,5 @@ TODO:
     - addin to prioritize parsing, so that feeds that update frequently are
       also checked more frequently.
     - addin to respect the ttl given by the feed publisher
+    - data collectors should support a default set of datda, so that
+      ``collect_item_data()`` is valid.
