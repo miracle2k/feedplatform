@@ -541,5 +541,10 @@ TODO:
     - addin to prioritize parsing, so that feeds that update frequently are
       also checked more frequently.
     - addin to respect the ttl given by the feed publisher
-    - data collectors should support a default set of datda, so that
+    - data collectors should support a default set of data, so that
       ``collect_item_data()`` is valid.
+    - explain in readme how certain hooks (like before_parse) can be used
+      to complete episode-worker jobs (e.g. guess the language of all
+      addins that have not been guessed yet). this is useful if an addin is
+      only added at a later point in the lifecycle of a project, for example.
+      builtin addins should support being used for this, where applicable.
