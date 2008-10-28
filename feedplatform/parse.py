@@ -15,7 +15,7 @@ from feedplatform.conf import config
 from feedplatform import db
 
 
-def simple_loop(callback=None):
+def simple_loop(callback=None, options={}):
     """Loop forever, and update feeds.
 
     Callback will be run every time a feed was updated, and is
@@ -40,14 +40,25 @@ def simple_loop(callback=None):
             return
 
 
-def update_feed(feed):
+def update_feed(feed, options={}):
     """Parse and update a single feed, as specified by the instance
     of the ``Feed`` model in ``feed``.
 
     This is the one, main, most important core function, at the
     epicenter of the package, providing different hooks to the rest
     of the world.
+
+    ``options`` can contain any values, and addins may choose to act
+    differently depending on what they find there. For example, this
+    allows you to support a "full" and "light" mode, whereas
+    performance heavy jobs like downloading a feed image are only
+    processed when necessary in light mode, but will be forced in
+    full mode.
     """
+
+    # instead of adding an additional argument every hook, pass
+    # the option along via ``feed``.
+    feed._options = options.copy()
 
     # HOOK: BEFORE_PARSE
     parser_args = {
