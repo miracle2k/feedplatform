@@ -68,7 +68,7 @@ class _base_data_collector(addins.base):
             if not isinstance(value, dict):
                 self.fields[name] = {'field': value, 'target': name}
 
-    def get_columns(self):
+    def get_fields(self):
         return {self.model_name: dict([(k['target'], k['field'])
                     for n, k in self.fields.iteritems()])}
 

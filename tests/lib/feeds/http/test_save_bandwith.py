@@ -17,12 +17,12 @@ def test_available_fields():
     # field names and the negative assert would always be True.
 
     addin = save_bandwith(etag=False)
-    assert not 'http_etag' in addin.get_columns()['feed']
-    assert 'http_modified' in addin.get_columns()['feed']
+    assert not 'http_etag' in addin.get_fields()['feed']
+    assert 'http_modified' in addin.get_fields()['feed']
 
     addin = save_bandwith(modified=False)
-    assert not 'http_modified' in addin.get_columns()['feed']
-    assert 'http_etag' in addin.get_columns()['feed']
+    assert not 'http_modified' in addin.get_fields()['feed']
+    assert 'http_etag' in addin.get_fields()['feed']
 
 
 def test(*args, **kwargs):
@@ -40,7 +40,7 @@ def test_inheritance():
 
     # adds the columns to store etag and modified
     class provide_columns(addins.base):
-        def get_columns(self):
+        def get_fields(self):
             return {
                 'feed': {
                     'my_etag': (Unicode, (), {}),

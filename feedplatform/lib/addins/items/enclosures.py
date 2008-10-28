@@ -76,7 +76,7 @@ class store_enclosures(addins.base):
         return ('create_enclosure', 'new_enclosure',
                 'found_enclosure', 'process_enclosure',)
 
-    def get_columns(self):
+    def get_fields(self):
         return {
             'enclosure': {
                 'id': (Int, (), {'primary': True}),

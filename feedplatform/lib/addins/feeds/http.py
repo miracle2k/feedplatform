@@ -132,7 +132,7 @@ class save_bandwith(addins.base):
     def __init__(self, etag=True, modified=True):
         self.etag, self.modified = etag, modified
 
-    def get_columns(self):
+    def get_fields(self):
         if self.custom_storage:
             return {}
         else:

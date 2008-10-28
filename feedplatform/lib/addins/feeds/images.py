@@ -501,7 +501,7 @@ class feed_image_restrict_frequency(addins.base):
     def __init__(self, delta):
         self.delta = delta
 
-    def get_columns(self):
+    def get_fields(self):
         return {'feed': {'image_updated': (DateTime, [], {})}}
 
     def on_feed_image(self, feed, image_dict, image):

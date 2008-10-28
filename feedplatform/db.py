@@ -177,8 +177,8 @@ class ModelsProxy(types.ModuleType):
         blueprints = copy.deepcopy(BASE_MODELS)
         from feedplatform import addins
         for addin in addins.get_addins():
-            if hasattr(addin, 'get_columns'):
-                for table, new_fields in addin.get_columns().items():
+            if hasattr(addin, 'get_fields'):
+                for table, new_fields in addin.get_fields().items():
                     if not table in blueprints:
                         blueprints[table] = {}
                     blueprints[table].update(new_fields)
