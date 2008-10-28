@@ -5,7 +5,7 @@ from feedplatform.lib import store_enclosures
 
 class test_addin(addins.base):
     called = 0
-    def on_create_enclosure(self, item, enclosure_dict, href):
+    def on_create_enclosure(self, feed, item, enclosure_dict, href):
         self.__class__.called += 1
         # custom bake the enclosure instance
         enclosure = db.models.Enclosure()

@@ -133,7 +133,7 @@ class store_enclosures(addins.base):
             if enclosure is None:
                 # HOOK: CREATE_ENCLOSURE
                 enclosure = hooks.trigger('create_enclosure',
-                    args=[item, enclosure_dict, href])
+                    args=[feed, item, enclosure_dict, href])
                 if not enclosure:
                     enclosure = db.models.Enclosure()
                     enclosure.item = item
@@ -142,19 +142,19 @@ class store_enclosures(addins.base):
 
                 # HOOK: NEW_ENCLOSURE
                 hooks.trigger('new_enclosure',
-                    args=[enclosure, enclosure_dict])
+                    args=[feed, enclosure, enclosure_dict])
                 enclosure_created = True
 
                 self.log.debug('Item #%d: new enclosure: %s' % (item.id, href))
             else:
                 # HOOK: FOUND_ENCLOSURE
                 hooks.trigger('found_enclosure',
-                    args=[enclosure, enclosure_dict])
+                    args=[feed, enclosure, enclosure_dict])
                 enclosure_created = False
 
             # HOOK: PROCESS_ENCLOSURE
             hooks.trigger('process_enclosure',
-                args=[enclosure, enclosure_dict, enclosure_created])
+                args=[feed, enclosure, enclosure_dict, enclosure_created])
 
 
 class collect_enclosure_data(_base_data_collector):
@@ -209,10 +209,10 @@ class collect_enclosure_data(_base_data_collector):
         else:
             return self.USE_DEFAULT
 
-    def on_found_enclosure(self, enclosure, enclosure_dict):
+    def on_found_enclosure(self, feed, enclosure, enclosure_dict):
         return self._process(enclosure, enclosure_dict)
 
-    def on_new_enclosure(self, enclosure, enclosure_dict):
+    def on_new_enclosure(self, feed, enclosure, enclosure_dict):
         return self._process(enclosure, enclosure_dict)
 
     def on_item(self, feed, data_dict, entry_dict):

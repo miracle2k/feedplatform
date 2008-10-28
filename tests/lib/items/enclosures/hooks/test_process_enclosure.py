@@ -5,7 +5,7 @@ from feedplatform.lib import store_enclosures
 class test_addin(addins.base):
     called = 0
     called_created = 0
-    def on_process_enclosure(self, enclosure, enclosure_dict, created):
+    def on_process_enclosure(self, feed, enclosure, enclosure_dict, created):
         self.__class__.called += 1
         if created:
             self.__class__.called_created += 1

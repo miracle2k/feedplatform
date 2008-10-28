@@ -4,7 +4,7 @@ from feedplatform.lib import store_enclosures
 
 class test_addin(addins.base):
     called = 0
-    def on_new_enclosure(self, enclosure, enclosure_dict):
+    def on_new_enclosure(self, feed, enclosure, enclosure_dict):
         self.__class__.called += 1
 
 ADDINS = [store_enclosures, test_addin]
