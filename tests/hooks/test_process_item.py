@@ -4,7 +4,7 @@ from feedplatform import addins
 class test_addin(addins.base):
     called = 0
     called_created = 0
-    def on_process_item(self, item, entry_dict, created):
+    def on_process_item(self, feed, item, entry_dict, created):
         self.__class__.called += 1
         if created:
             self.__class__.called_created += 1

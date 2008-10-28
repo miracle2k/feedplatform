@@ -30,8 +30,8 @@ class collect_item_data(_base_data_collector):
     }
     date_fields = ('updated',)
 
-    def on_found_item(self, item, entry_dict):
+    def on_found_item(self, feed, item, entry_dict):
         return self._process(item, entry_dict)
 
-    def on_new_item(self, item, entry_dict):
+    def on_new_item(self, feed, item, entry_dict):
         return self._process(item, entry_dict)

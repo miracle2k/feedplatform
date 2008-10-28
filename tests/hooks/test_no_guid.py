@@ -3,7 +3,7 @@ from feedplatform import addins
 
 class test_addin(addins.base):
     called = 0
-    def on_no_guid(self, feeds, item_dict):
+    def on_no_guid(self, feed, item_dict):
         self.__class__.called += 1
 
 ADDINS = [test_addin()]

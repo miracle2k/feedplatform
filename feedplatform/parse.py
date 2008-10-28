@@ -166,18 +166,18 @@ def update_feed(feed):
             # changes made by this hook will go into the initial
             # INSERT query. If you need an existing primary key, use
             # the process_item hook instead.
-            hooks.trigger('new_item', args=[item, entry_dict])
+            hooks.trigger('new_item', args=[feed, item, entry_dict])
 
             db.store.flush()
             log.info('Feed #%d: found new item (#%d)' % (feed.id, item.id))
             item_created = True
         else:
             # HOOK: FOUND_ITEM
-            hooks.trigger('found_item', args=[item, entry_dict])
+            hooks.trigger('found_item', args=[feed, item, entry_dict])
             item_created = False
 
         # HOOK: PROCESS_ITEM
-        hooks.trigger('process_item', args=[item, entry_dict, item_created])
+        hooks.trigger('process_item', args=[feed, item, entry_dict, item_created])
 
         # flush once for each item
         db.store.flush()

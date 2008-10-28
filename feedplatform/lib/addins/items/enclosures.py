@@ -89,7 +89,7 @@ class store_enclosures(addins.base):
             }
         }
 
-    def on_process_item(self, item, entry_dict, item_created):
+    def on_process_item(self, feed, item, entry_dict, item_created):
         """
         Per the suggested protocol, we're using ``process_item``, since we
         don't want nor need to cause an update to the item, but instead
