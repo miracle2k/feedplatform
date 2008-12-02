@@ -85,7 +85,7 @@ class _base_data_collector(addins.base):
             # inside base _get_value, so that subclasses don't need to
             # bother with super().
             new_value = self._get_value(source_dict, source_name,
-                                    target_name, *args, **kwargs)
+                                        target_name, *args, **kwargs)
             if new_value is self.USE_DEFAULT:
                 # dates need to be converted to datetime
                 if self.date_fields and source_name in self.date_fields:
