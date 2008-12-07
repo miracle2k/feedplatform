@@ -170,6 +170,22 @@ def test_save():
             # the content usually won't match in this case, though
     _test_image(FeedImage)
 
+    # [bug] Saving the image without explicitely requesting a format
+    # and with a filename that does not contain an extension, or an
+    # extension that is not a valid image format, used to fail with
+    # a ``KeyError``. Now the source format will be used.
+    # A similar test is required for thumbnail-specific code and can
+    # be found in ``test_feed_image_thumbnails.py``.
+    class FeedImage(feedev.File):
+        content = ValidPNGImage
+        def test(image):
+            name = tempfile.mktemp() + '.aspx'
+            image.pil   # make sure pil will be used
+            assert image.pil_loaded
+            image.save(name)
+            assert os.path.exists(name)
+    _test_image(FeedImage)
+
     # test a file saved through pil with format request
     class FeedImage(feedev.File):
         content = ValidPNGImage

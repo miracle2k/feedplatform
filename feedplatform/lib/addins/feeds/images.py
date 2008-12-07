@@ -194,7 +194,7 @@ class RemoteImage(object):
 
     def _load_data(self):
         """Download the image while yielding chunks as they are
-        incoming.
+        coming in.
 
         Called internally when access to the image data is needed. The
         fact that the data is yielded live means the caller may already
@@ -320,9 +320,9 @@ class RemoteImage(object):
         # If a PIL image is already available, or required due to
         # a requested format conversion, save the image through PIL.
         if format or (self.pil_loaded and self.pil):
-            self.pil.save(filename, format)
+            self.pil.save(filename, format or self.pil.format)
 
-        # Otherwise write the data manually
+        # otherwise write the data manually
         else:
             f = open(filename, 'wb')
             try:
@@ -532,8 +532,8 @@ class feed_image_restrict_extensions(addins.base):
 
     The extension does not necessarily need to be part of the url's
     filename. The addin also tries to defer it from the content type
-    header, and if everything fails, the image content themselves.
-    The latter means tha the image might need to be fully downloaded
+    header, and if everything fails, the image content itself. The
+    latter means that the image might need to be fully downloaded
     in some cases.
 
     If an extension cannot be determined, i.e. if the image content is
@@ -578,7 +578,7 @@ class feed_image_restrict_mediatypes(addins.base):
 
 
 class store_feed_images(addins.base):
-    """Will save feed images, as reported by ``handle_feed_cover`` to
+    """Will save feed images, as reported by ``handle_feed_cover``, to
     the filesystem.
 
     The required parameter ``path`` is used to specify the target
@@ -666,7 +666,7 @@ class feed_image_thumbnails(store_feed_images):
             })
             self._ensure_directories(path)
             thumb = make_thumbnail(image.pil, size[0], size[1], 'extend')
-            thumb.save(path, format=self.format)
+            thumb.save(path, format=self.format or image.pil.format)
 
 
 class collect_feed_image_data(_base_data_collector):
