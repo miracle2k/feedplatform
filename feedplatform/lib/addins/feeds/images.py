@@ -11,7 +11,7 @@ the image?
 
 import os
 import datetime
-import urllib2, urlparse
+import urllib2, httplib, urlparse
 import cgi
 import cStringIO as StringIO
 
@@ -439,8 +439,11 @@ class handle_feed_images(addins.base):
             hooks.trigger('feed_image_updated',
                         args=[feed, image_dict, image],)
 
-        except (urllib2.URLError, ImageError), e:
-            if isinstance(e, urllib2.URLError):
+        except (urllib2.URLError, httplib.InvalidURL, ImageError), e:
+            # TODO: we might have to generalize this so that not every
+            # urlopen() user has to normalize the different exception
+            # types all over again.
+            if isinstance(e, (urllib2.URLError, httplib.InvalidURL)):
                 self.log.debug('Feed #%d: failed to download image '
                     '"%s" (%s)' % (feed.id, image_href, e))
             elif isinstance(e, ImageError):
