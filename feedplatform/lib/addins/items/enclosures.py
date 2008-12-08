@@ -111,9 +111,6 @@ class store_enclosures(addins.base):
         # add new enclosures
         for enclosure_dict in enclosures:
             href = enclosure_dict.get('href')
-            # bug in feedparser can return those as bytestrings when bozo
-            if href is not None and not isinstance(href, unicode):
-                href = href.decode('utf8', 'ignore')
             if not href:
                 self.log.debug('Item #%d: enclosure has no href '
                     '- skipping.' % item.id)
