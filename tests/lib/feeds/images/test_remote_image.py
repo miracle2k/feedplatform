@@ -73,32 +73,65 @@ def test_filename():
 
 
 def test_extension():
+    # PIL and request not loaded, url contains extension
     class ByUrl(feedev.File):
-        url = 'http://images/imgs/cover.png'
+        url = 'http://images/imgs/cover.jpg'
+        headers = {'Content-Type': 'image/gif; charset=utf8'}
+        content = ValidPNGImage
         def test(image):
-            assert image.extension_by_contenttype == None
-            assert image.extension_by_url == 'png'
-            assert image.extension == 'png'
+            assert image.extension == 'jpg'
+
+            assert image.extension_by_url == 'jpg'
+            assert image.extension_by_contenttype == 'gif'
+            assert image.extension_by_pil == 'png'
     _test_image(ByUrl)
 
+    # PIL not loaded, url does not contain extension, headers are used
     class ByContentType(feedev.File):
         url = 'http://images/imgs/'
-        headers = {'Content-Type': 'image/png; charset=utf8'}
+        headers = {'Content-Type': 'image/gif; charset=utf8'}
+        content = ValidPNGImage
         def test(image):
+            assert image.extension == 'gif'
+
             assert image.extension_by_url == None
-            assert image.extension_by_contenttype == 'png'
-            assert image.extension == 'png'
+            assert image.extension_by_contenttype == 'gif'
+            assert image.extension_by_pil == 'png'
     _test_image(ByContentType)
 
+    # Url and headers do not contain extensions, the PIL format is used
     class ByPIL(feedev.File):
         url = 'http://images/imgs/'
         content = ValidPNGImage
         def test(image):
+            assert image.extension == 'png'
+
             assert image.extension_by_url == None
             assert image.extension_by_contenttype == None
             assert image.extension_by_pil == 'png'
-            assert image.extension == 'png'
     _test_image(ByPIL)
+
+    # If PIL is already loaded, the PIL format is preferred over everything
+    class PreferByPILIfLoaded(feedev.File):
+        url = 'http://images/imgs/cover.gif'
+        headers = {'Content-Type': 'image/gif; charset=utf8'}
+        content = ValidPNGImage
+        def test(image):
+            image.pil
+            assert image.pil_loaded
+            assert image.extension == 'png'
+    _test_image(PreferByPILIfLoaded)
+
+    # If request/response is already available, it is preferred over url
+    class PreferByContentTypeIfLoaded(feedev.File):
+        url = 'http://images/imgs/cover.jpeg'
+        content = ValidPNGImage
+        headers = {'Content-Type': 'image/gif; charset=utf8'}
+        def test(image):
+            image.request
+            assert image.request_opened
+            assert image.extension == 'gif'
+    _test_image(PreferByContentTypeIfLoaded)
 
 
 def test_data():

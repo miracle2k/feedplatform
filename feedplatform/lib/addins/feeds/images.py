@@ -83,6 +83,16 @@ class RemoteImage(object):
         return self._request
 
     @property
+    def request_opened(self):
+        """Return True if a HTTP request was made, and request and
+        response are available.
+
+        Use this if want to avoid unnecessarily opening the url, since
+        accessing ``request`` will do exactly that.
+        """
+        return hasattr(self, '_request')
+
+    @property
     def content_type(self):
         """Return the images mime type, as indicated by the server in
         the response headers.
@@ -184,9 +194,30 @@ class RemoteImage(object):
         """Return a file extension for the image, by trying different
         things (for example, the url may not contain one).
 
-        In an unlikely, but possible scenario, None can be returned, if
+        Tries to use the most accurate method while requiring the
+        least amount of work. For example, the format determined by
+        PIL would be the definitve answer, but if the image was not
+        yet loaded into PIL, less precises methods are preferred.
+        Only if those fail will PIL be forced. (TODO: test)
+
+        Note that because of this the extension can be used if the
+        format of the image is needed. While there a cases when the
+        extension won't be a valid image format, it often is, and when
+        more accuracy is needed make sure the image is loaded into PIL -
+        in which case the PIL format will be returned as the extension.
+
+        TODO: If we don't want this behaviour after all, we could
+        alternatively add a new property ``format`` that basically
+        follows this logic: try PIL, try headers, then fall back
+        to ``extension``.
+
+        In an unlikely, but possible scenario, None can be returned if
         no extension can be determined.
         """
+        if self.pil_loaded and self.extension_by_pil:
+            return self.extension_by_pil
+        if self.request_opened and self.extension_by_contenttype:
+            return self.extension_by_contenttype
         return self.extension_by_url or \
                self.extension_by_contenttype or \
                self.extension_by_pil or \
