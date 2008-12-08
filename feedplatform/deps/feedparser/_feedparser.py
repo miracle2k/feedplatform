@@ -1472,7 +1472,14 @@ class _FeedParserMixin:
     _end_itunes_summary = _end_summary
         
     def _start_enclosure(self, attrsD):
-        attrsD = self._itsAnHrefDamnIt(attrsD)
+        attrsD = self._itsAnHrefDamnIt(attrsD)        
+        for key in attrsD.keys():
+			# copied from self.push()
+            if self.encoding and type(attrsD[key]) != type(u''):
+                try:
+                    attrsD[key] = unicode(attrsD[key], self.encoding)
+                except:
+                    pass
         context = self._getContext()
         attrsD['rel']='enclosure'
         context.setdefault('links', []).append(FeedParserDict(attrsD))
