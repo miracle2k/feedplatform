@@ -1,0 +1,35 @@
+Make sure that enclosures are exposed as unicode strings.
+
+From: melsdoerfer <michael@elsdoerfer.com>
+
+Fixes a bug that can cause the attribute values of the enclosure dicts to be byte strings, under certain circumstances (for example, if the feed is bozo). The problem is that unlike tag contents, which are all converted to unicode, the enclosure lists just collect what is returned from the parser as-is. Depending on what parser is used (loose, strict, ...), the behaviour can therefore differ.
+
+While the patch is not strictly required, you are strongly encouraged to use it. FeedPlatform expects the parser to expose all values as unicode, and it's ORM (Storm) requires unicode input. Without the patch, you are bound to see ORM exceptions sooner or later.
+
+Reported as issue #148.
+---
+
+ feedparser/feedparser.py |    9 ++++++++-
+ 1 files changed, 8 insertions(+), 1 deletions(-)
+
+
+diff --git a/feedparser/feedparser.py b/feedparser/feedparser.py
+index 5b66379..0ad5c32 100644
+--- a/feedparser/feedparser.py
++++ b/feedparser/feedparser.py
+@@ -1472,7 +1472,14 @@ class _FeedParserMixin:
+     _end_itunes_summary = _end_summary
+         
+     def _start_enclosure(self, attrsD):
+-        attrsD = self._itsAnHrefDamnIt(attrsD)
++        attrsD = self._itsAnHrefDamnIt(attrsD)        
++        for key in attrsD.keys():
++			# copied from self.push()
++            if self.encoding and type(attrsD[key]) != type(u''):
++                try:
++                    attrsD[key] = unicode(attrsD[key], self.encoding)
++                except:
++                    pass
+         context = self._getContext()
+         attrsD['rel']='enclosure'
+         context.setdefault('links', []).append(FeedParserDict(attrsD))

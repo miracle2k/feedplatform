@@ -1,8 +1,10 @@
-#107 guid is converted to absolute link, even if isPermaLink=="false"
+No longer convert an item id (guid) into an absolute link if isPermaLink=="false".
 
 From: melsdoerfer <michael@elsdoerfer.com>
 
+While not strictly necessary to run FeedPlatform, it is strongly recommended. For example, one significant issue arising from this is that the domain name used to build the absolute url may change (say the feed is redirected to a new address), thus effectively changing all the ids.
 
+Reported as issue #107.
 ---
 
  feedparser/feedparser.py |    4 +++-
@@ -10,7 +12,7 @@ From: melsdoerfer <michael@elsdoerfer.com>
 
 
 diff --git a/feedparser/feedparser.py b/feedparser/feedparser.py
-index 134637e..5b66379 100644
+index 37a1a29..75f8663 100644
 --- a/feedparser/feedparser.py
 +++ b/feedparser/feedparser.py
 @@ -732,7 +732,9 @@ class _FeedParserMixin:

@@ -1,0 +1,80 @@
+Do not use an item's enclosure href as a fallback if an id (guid) is missing.
+
+From: melsdoerfer <michael@elsdoerfer.com>
+
+Feedparser automatically uses an enclosure url as the item id/guid. We however want to provide our own addin to do this optionally, so the patch disables this particular functionality.
+
+If not applied, the ``guid_by_enclosure`` addin will have no effect, and Feedparser's own "enclosure-as-id" functionality will take precedence over any custom guid-providing addins.
+
+Reported as issue #131.
+---
+
+ feedparser/feedparser.py                           |    5 -----
+ .../itunes/itunes_enclosure_url_maps_id.xml        |    4 ++--
+ .../itunes/itunes_enclosure_url_maps_id.xml        |    4 ++--
+ .../itunes/itunes_link_enclosure_maps_id.xml       |    4 ++--
+ 4 files changed, 6 insertions(+), 11 deletions(-)
+
+
+diff --git a/feedparser/feedparser.py b/feedparser/feedparser.py
+index 75f8663..5b66379 100644
+--- a/feedparser/feedparser.py
++++ b/feedparser/feedparser.py
+@@ -1348,8 +1348,6 @@ class _FeedParserMixin:
+         attrsD = self._itsAnHrefDamnIt(attrsD)
+         if attrsD.has_key('href'):
+             attrsD['href'] = self.resolveURI(attrsD['href'])
+-            if attrsD.get('rel')=='enclosure' and not context.get('id'):
+-                context['id'] = attrsD.get('href')
+         expectingText = self.infeed or self.inentry or self.insource
+         context.setdefault('links', [])
+         context['links'].append(FeedParserDict(attrsD))
+@@ -1478,9 +1476,6 @@ class _FeedParserMixin:
+         context = self._getContext()
+         attrsD['rel']='enclosure'
+         context.setdefault('links', []).append(FeedParserDict(attrsD))
+-        href = attrsD.get('href')
+-        if href and not context.get('id'):
+-            context['id'] = href
+             
+     def _start_source(self, attrsD):
+         self.insource = 1
+diff --git a/feedparser/tests/illformed/itunes/itunes_enclosure_url_maps_id.xml b/feedparser/tests/illformed/itunes/itunes_enclosure_url_maps_id.xml
+index b9ee2f1..868b7c4 100644
+--- a/feedparser/tests/illformed/itunes/itunes_enclosure_url_maps_id.xml
++++ b/feedparser/tests/illformed/itunes/itunes_enclosure_url_maps_id.xml
+@@ -1,6 +1,6 @@
+ <!--
+-Description: iTunes enclosure URL maps to ID if no ID is present
+-Expect:      bozo and entries[0]['id'] == u'http://example.com/movie.mp4'
++Description: iTunes enclosure URL *DOES NOT* map to ID even if no ID is present
++Expect:      bozo and not entries[0].has_key('id')
+ -->
+ <rss xmlns:itunes="http://www.itunes.com/DTDs/Podcast-1.0.dtd">
+ <channel>
+diff --git a/feedparser/tests/wellformed/itunes/itunes_enclosure_url_maps_id.xml b/feedparser/tests/wellformed/itunes/itunes_enclosure_url_maps_id.xml
+index a6d8183..4744217 100644
+--- a/feedparser/tests/wellformed/itunes/itunes_enclosure_url_maps_id.xml
++++ b/feedparser/tests/wellformed/itunes/itunes_enclosure_url_maps_id.xml
+@@ -1,6 +1,6 @@
+ <!--
+-Description: iTunes enclosure URL maps to ID if no ID is present
+-Expect:      not bozo and entries[0]['id'] == u'http://example.com/movie.mp4'
++Description: iTunes enclosure URL *DOES NOT* map to ID even if no ID is present
++Expect:      not bozo and not entries[0].has_key('id')
+ -->
+ <rss xmlns:itunes="http://www.itunes.com/DTDs/Podcast-1.0.dtd">
+ <channel>
+diff --git a/feedparser/tests/wellformed/itunes/itunes_link_enclosure_maps_id.xml b/feedparser/tests/wellformed/itunes/itunes_link_enclosure_maps_id.xml
+index 186c204..771a921 100644
+--- a/feedparser/tests/wellformed/itunes/itunes_link_enclosure_maps_id.xml
++++ b/feedparser/tests/wellformed/itunes/itunes_link_enclosure_maps_id.xml
+@@ -1,6 +1,6 @@
+ <!--
+-Description: iTunes link rel=enclosure href maps to ID if no ID is present
+-Expect:      not bozo and entries[0]['id'] == u'http://example.com/movie.mp4'
++Description: iTunes link rel=enclosure href *DOES NOT* map to ID even if no ID is present
++Expect:      not bozo and not entries[0].has_key('id')
+ -->
+ <feed xmlns="http://www.w3.org/2005/Atom" xmlns:itunes="http://www.itunes.com/DTDs/Podcast-1.0.dtd">
+ <entry>
