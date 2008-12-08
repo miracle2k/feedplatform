@@ -4,6 +4,7 @@ from feedplatform import addins
 from feedplatform import db
 from feedplatform.lib import collect_feed_image_data
 from feedplatform.lib.addins.feeds.images import ImageError
+from _image_test_utils import ValidPNGImage
 
 
 def test_basic():
@@ -107,5 +108,51 @@ def test_bozo():
             # feed is bozo (image tag not closed), but addin is active
             # nevertheless.
             assert feed.image_href == 'http://example.org/blog/image.jpg'
+
+    feedev.testcaller()
+
+
+def test_unicode():
+    """Regression test for a bug that caused storm to raise an
+    "Expected unicode" TypeError in certain circumstances (the addin
+    was trying to assign a str).
+    """
+    ADDINS = [collect_feed_image_data('href', 'extension')]
+
+    class ImgWithExtByContent(feedev.File):
+        url = 'http://images/validimage'
+        content = ValidPNGImage
+
+    class ImgWithExtByHeaders(feedev.File):
+        url = 'http://images/validimage'
+        headers = {'Content-Type': 'image/gif; charset=utf8'}
+
+    class BozoFeed(feedev.Feed):
+        content = """
+        <rss><channel>
+            <image>
+                <!-- extension from url is unicode -->
+                {% =1 %}<url>http://example.org/blog/image.jpg</url>{% end %}
+                <!-- extension read from headers is unicode -->
+                {% =2 %}<url>"""+ImgWithExtByHeaders.url+"""</url>{% end %}
+                <!-- extension from pil content is unicode -->
+                {% =3 %}<url>"""+ImgWithExtByContent.url+"""</url>{% end %}
+            </image>
+        </channel></rss>
+        """
+
+        # These assertions are here for completion's sake, but
+        # normally shouldn't ever fail, since the bug we are
+        # regression here really raises a TypeError.
+        def pass1(feed):
+            assert type(feed.image_href) == unicode
+            assert type(feed.image_extension) == unicode
+
+        def pass2(feed):
+            assert type(feed.image_extension) == unicode
+
+        def pass3(feed):
+            assert type(feed.image_extension) == unicode
+
 
     feedev.testcaller()

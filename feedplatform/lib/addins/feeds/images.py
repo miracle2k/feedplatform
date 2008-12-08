@@ -105,7 +105,7 @@ class RemoteImage(object):
         if not content_type:
             return None
         content_type, params = cgi.parse_header(content_type)
-        return content_type
+        return unicode(content_type, 'utf8', 'replace')
 
     @property
     def content_length(self):
@@ -151,7 +151,7 @@ class RemoteImage(object):
         if not os.path.splitext(filename)[1]:
             ext = self.extension
             if ext:
-                filename = '%s.%s' % (filename, ext)
+                filename = u'%s.%s' % (filename, ext)
         return filename
 
     @property
@@ -172,9 +172,9 @@ class RemoteImage(object):
         Compares against a dict of well-known content types.
         """
         return {
-            'image/png': 'png',
-            'image/gif': 'gif',
-            'image/jpeg': 'jpg',
+            'image/png': u'png',
+            'image/gif': u'gif',
+            'image/jpeg': u'jpg',
         }.get(self.content_type, None)
 
     @property
@@ -187,7 +187,7 @@ class RemoteImage(object):
         ``django.core.files.images.get_image_dimensions``.
         """
         if self.pil:
-            return self.pil.format.lower()
+            return unicode(self.pil.format.lower())
 
     @property
     def extension(self):

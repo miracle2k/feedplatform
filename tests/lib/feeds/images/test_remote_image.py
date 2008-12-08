@@ -27,7 +27,9 @@ def _test_image(image):
 
     class FakeFeed(feedev.Feed):
         def pass1(feed):
-            image.test(RemoteImage(image.url))
+            # RemoteImage exposes a unicode interface, but expects
+            # the url given be unicode as well.
+            image.test(RemoteImage(unicode(image.url)))
 
     feedev.testcustom([image, FakeFeed])
 
@@ -228,4 +230,23 @@ def test_save():
             assert os.path.exists(name)
             from PIL import Image
             assert Image.open(name).format == 'GIF'
+    _test_image(FeedImage)
+
+
+def test_unicode():
+    """Test that ``RemoteImage`` exposes a unicode interface, so it
+    can easily be used with the Storm ORM.
+    """
+    class FeedImage(feedev.File):
+        url = 'http://images/imgs/cover.jpeg'
+        content = ValidPNGImage
+        headers = {'Content-Type': 'image/gif; charset=utf8'}
+        def test(image):
+            assert type(image.content_type) == unicode
+            assert type(image.filename) == unicode
+            assert type(image.filename_with_ext) == unicode
+            assert type(image.extension_by_contenttype) == unicode
+            assert type(image.extension_by_pil) == unicode
+            assert type(image.extension_by_url) == unicode
+            assert type(image.extension) == unicode
     _test_image(FeedImage)
