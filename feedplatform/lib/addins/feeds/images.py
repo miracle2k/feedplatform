@@ -321,6 +321,23 @@ class RemoteImage(object):
             self.data.seek(0)  # PIL lies in docs, does not rewind
             try:
                 self._pil = PILImage.open(self.data)
+                # A bunch of errors are only raised when PIL actually
+                # attempts to decode the image, which does not necessarily
+                # happend when you open it. Those include for example:
+                #     - "cannot read interlaced PNG files"
+                #     - "* decoder not available"
+                # By forcing a load here we can catch them in one place,
+                # though at the expense of wasting performance in cases
+                # were a full decoding is not required (for example if
+                # we only need access to the format of the Image (which
+                # PIL "guesses" based on the header).
+                # The alternative approach would we to handle these
+                # exceptions manually every time an image operation is
+                # used that decodes the image. What we cannot do is
+                # catch IOError globally in handle_feed_images - there are
+                # other IOErrors that could occur that we don't want to
+                # hide, like permission problems when saving.
+                self._pil.load()
             except IOError, e:
                 raise ImageError('Not a valid image: %s' % e)
 
