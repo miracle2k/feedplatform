@@ -5,6 +5,7 @@ absolute URL.
 from feedplatform import test as feedev
 from feedplatform import db
 
+
 class TestFeed(feedev.Feed):
     url = u"http://base.com/feed"
     content = """
@@ -17,6 +18,7 @@ class TestFeed(feedev.Feed):
     def pass1(feed):
         assert feed.items.find(db.models.Item.guid == u'xyz').count() == 1
         assert feed.items.find(db.models.Item.guid == u'http://base.com/xyz').count() == 1
+
 
 def test():
     feedev.testmod()

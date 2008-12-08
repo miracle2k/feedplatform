@@ -135,5 +135,6 @@ class BozoFeed(feedev.Feed):
         # end up with enclosures in the feedparser.
         assert feed.items.one().enclosures.one().length == 10
 
+
 def test():
     feedev.testmod()
