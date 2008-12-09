@@ -20,7 +20,7 @@ from storm.locals import Unicode, DateTime
 from feedplatform import addins
 from feedplatform import db
 from feedplatform import hooks
-from feedplatform.util import urlopen
+from feedplatform import util
 from collect_feed_data import _base_data_collector
 
 
@@ -79,7 +79,15 @@ class RemoteImage(object):
         The first time this is accessed, the actual request will be made.
         """
         if not hasattr(self, '_request'):
-            self._request = urlopen(self.url)
+            try:
+                self._request = util.urlopen(self.url)
+            # TODO: we might have to generalize this so that not every
+            # urlopen() user has to normalize the different exception
+            # types all over again.
+            except (urllib2.URLError, httplib.InvalidURL, IOError), e:
+                # IOError might be for example:
+                #   [Errno ftp error] 530 Login incorrect.
+                raise ImageError('failed to download: %s' % e)
         return self._request
 
     @property
@@ -487,15 +495,8 @@ class handle_feed_images(addins.base):
             hooks.trigger('feed_image_updated',
                         args=[feed, image_dict, image],)
 
-        except (urllib2.URLError, httplib.InvalidURL, ImageError), e:
-            # TODO: we might have to generalize this so that not every
-            # urlopen() user has to normalize the different exception
-            # types all over again.
-            if isinstance(e, (urllib2.URLError, httplib.InvalidURL)):
-                self.log.debug('Feed #%d: failed to download image '
-                    '"%s" (%s)' % (feed.id, image_href, e))
-            elif isinstance(e, ImageError):
-                self.log.warning('Feed #%d: error handling image "%s" (%s)' %
+        except ImageError, e:
+            self.log.warning('Feed #%d: error handling image "%s" (%s)' %
                 (feed.id, image_href, e))
 
             # HOOK: FEED_IMAGE_FAILED
