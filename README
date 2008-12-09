@@ -548,3 +548,8 @@ TODO:
       addins that have not been guessed yet). this is useful if an addin is
       only added at a later point in the lifecycle of a project, for example.
       builtin addins should support being used for this, where applicable.
+    - abstract the Storm backend away. not only would this allow alternative
+      backends, like say, couchdb, it would also simplify cases where you'd
+      want to use FeedPlatform to sync for example a single feed, by letting
+      you use a "static backend", where the feed urls could be given directly
+      in Python.

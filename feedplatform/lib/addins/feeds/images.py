@@ -339,12 +339,21 @@ class RemoteImage(object):
                 # were a full decoding is not required (for example if
                 # we only need access to the format of the Image (which
                 # PIL "guesses" based on the header).
+                #
                 # The alternative approach would we to handle these
                 # exceptions manually every time an image operation is
                 # used that decodes the image. What we cannot do is
                 # catch IOError globally in handle_feed_images - there are
                 # other IOErrors that could occur that we don't want to
                 # hide, like permission problems when saving.
+                #
+                # TODO: Actually, it makes sense to do this: Unnecessarily
+                # wasting resources due to loading the image when not
+                # required is something we should avoid. For now, we'd have
+                # to catch the IOError:
+                #   - when saving the image with PIL in RemoteImage.save
+                #   - when saving a thumbnail
+                # We should also add tests for both scenarios.
                 self._pil.load()
             except IOError, e:
                 raise ImageError('Not a valid image: %s' % e)
