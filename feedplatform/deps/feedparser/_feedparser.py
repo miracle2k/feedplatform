@@ -968,12 +968,35 @@ class _FeedParserMixin:
     
     def _start_image(self, attrsD):
         context = self._getContext()
+
+        # bozo
+        if self.inentry:
+            self._save('bozo', 'Improper use of image tag inside item tag.')
+            context.setdefault('media_thumbnail', [])
+            self.push('url', 1)
+            context['media_thumbnail'].append(attrsD)
+            self.inimage = 1
+            self.hasTitle = 0
+            return
+        
+        # non-bozo
         context.setdefault('image', FeedParserDict())
         self.inimage = 1
         self.hasTitle = 0
         self.push('image', 0)
             
     def _end_image(self):
+        # bozo
+        if self.inentry:
+            context = self.entries[-1]
+            url = self.pop('url')
+            if url != None and len(url.strip()) != 0:
+                if not context['media_thumbnail'][-1].has_key('url'):
+                    context['media_thumbnail'][-1]['url'] = url
+            self.inimage = 0
+            return
+
+        # non-bozo
         self.pop('image')
         self.inimage = 0
 
@@ -1088,6 +1111,16 @@ class _FeedParserMixin:
 
     def _end_url(self):
         value = self.pop('href')
+
+        # bozo
+        if self.inentry and self.inimage:
+            context = self.entries[-1]
+            if value != None and len(value.strip()) != 0:
+                if not context['media_thumbnail'][-1].has_key('url'):
+                    context['media_thumbnail'][-1]['url'] = value
+            return
+
+        # non-bozo
         if self.inauthor:
             self._save_author('href', value)
         elif self.incontributor:
@@ -1113,6 +1146,11 @@ class _FeedParserMixin:
         if self.insource:
             context = self.sourcedata
         elif self.inimage:
+            # bozo
+            if self.inentry:
+                return self.feeddata
+
+            # non-bozo
             context = self.feeddata['image']
         elif self.intextinput:
             context = self.feeddata['textinput']
