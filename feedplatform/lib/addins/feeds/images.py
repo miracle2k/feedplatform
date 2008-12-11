@@ -81,12 +81,7 @@ class RemoteImage(object):
         if not hasattr(self, '_request'):
             try:
                 self._request = util.urlopen(self.url)
-            # TODO: we might have to generalize this so that not every
-            # urlopen() user has to normalize the different exception
-            # types all over again.
-            except (urllib2.URLError, httplib.InvalidURL, IOError), e:
-                # IOError might be for example:
-                #   [Errno ftp error] 530 Login incorrect.
+            except util.UrlOpenError, e:
                 raise ImageError('failed to download: %s' % e)
         return self._request
 

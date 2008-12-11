@@ -12,7 +12,7 @@ __all__ = (
     'struct_to_datetime',
     'datetime_to_struct',
     'to_unicode',
-    'urlopen' ,
+    'urlopen', 'UrlOpenError',
 )
 
 
@@ -53,17 +53,35 @@ def to_unicode(s):
         return unicode(s)
 
 
+class UrlOpenError(Exception):
+    pass
+
 def urlopen(*args, **kwargs):
     """Wrapper around ``urllib2.urlopen`` that uses the handlers and user
     agent string defined in the feedplatform configuration.
 
     This should be used whenever network access is required as part of the
     aggregator functionality.
+
+    It also normalizes exception handling, which is slightly challenging,
+    and reraises ``UrlOpenError``s for exceptions that you likely want to
+    handle was potentially expected.
     """
     opener = urllib2.build_opener(*config.URLLIB2_HANDLERS)
     try:
         request = urllib2.Request(*args, **kwargs)
         request.add_header('User-Agent', config.USER_AGENT)
-        return opener.open(request)
+        try:
+            return opener.open(request)
+        except Exception, e:
+            # At least five different exceptions may occur here:
+            #    - urllib2.URLError
+            #    - httplib.HTTPException, e.g. "nun-numeric port"
+            #    - IOError, e.g. "[Errno ftp error] 530 Login incorrect"
+            #    - WindowsError, e.g. when opening from filesystem
+            #    - ValueError, e.g. "unknown url type"
+            # There are likely more. Instead of listing them explicitely,
+            # we simple allow ourselves to capture everything.
+            raise UrlOpenError("%s" % e)
     finally:
         opener.close()
