@@ -4,21 +4,30 @@ From: melsdoerfer <michael@elsdoerfer.com>
 
 The 4.1 release did not exhibit this bug.
 
-This is reported as issue #108, and includes a patch by jabronson, wich is the one we are using.
+This is reported as issue #108, and includes a patch by jabronson, on which our own patch is based.
 
 While not strictly necessary to run FeedPlatform, you are strongly encouraged to use the patch, or you'll probably run into the bug sooner or later.
 ---
 
- feedparser/feedparser.py                           |   50 ++++++++++++++++++--
- .../tests/illformed/rss/channel_image_item.xml     |   15 ++++++
- 2 files changed, 59 insertions(+), 6 deletions(-)
+ feedparser/feedparser.py                           |   52 +++++++++++++++++---
+ .../tests/illformed/rss/channel_image_item.xml     |   16 ++++++
+ 2 files changed, 61 insertions(+), 7 deletions(-)
  create mode 100644 feedparser/tests/illformed/rss/channel_image_item.xml
 
 
 diff --git a/feedparser/feedparser.py b/feedparser/feedparser.py
-index 0ad5c32..484fe9d 100644
+index 0ad5c32..11f251c 100644
 --- a/feedparser/feedparser.py
 +++ b/feedparser/feedparser.py
+@@ -806,7 +806,7 @@ class _FeedParserMixin:
+             return output
+         
+         # store output in appropriate place(s)
+-        if self.inentry and not self.insource:
++        if self.inentry and not self.insource and not self.inimage:
+             if element == 'content':
+                 self.entries[-1].setdefault(element, [])
+                 contentparams = copy.deepcopy(self.contentparams)
 @@ -968,12 +968,35 @@ class _FeedParserMixin:
      
      def _start_image(self, attrsD):
@@ -106,13 +115,13 @@ index 0ad5c32..484fe9d 100644
          attrsD['rel']='enclosure'
 diff --git a/feedparser/tests/illformed/rss/channel_image_item.xml b/feedparser/tests/illformed/rss/channel_image_item.xml
 new file mode 100644
-index 0000000..a0df1ef
+index 0000000..1d9b33f
 --- /dev/null
 +++ b/feedparser/tests/illformed/rss/channel_image_item.xml
-@@ -0,0 +1,15 @@
+@@ -0,0 +1,16 @@
 +<!--
-+Description: misplaced <image> in <item> treated as <media:thumbnail url=...>
-+Expect:      bozo and entries[0]['media_thumbnail'][0]['url'] == u'http://image.example.com'
++Description: misplaced <image> in <item> treated as <media:thumbnail url=...>; <link> in <image> does not override entry-level <link>
++Expect:      bozo and entries[0]['media_thumbnail'][0]['url'] == u'http://url.image.example.com' and entries[0]['link'] == u'http://item.example.com'
 +-->
 +<rss version="2.0">
 +<channel>
@@ -120,7 +129,8 @@ index 0000000..a0df1ef
 +<item>
 +  <link>http://item.example.com</link>
 +  <image>
-+    <url>http://image.example.com</url>
++    <url>http://url.image.example.com</url>
++    <link>http://link.image.example.com</link>
 +  </image>
 +</item>
 +</channel>

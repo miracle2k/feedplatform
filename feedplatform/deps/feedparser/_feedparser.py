@@ -806,7 +806,7 @@ class _FeedParserMixin:
             return output
         
         # store output in appropriate place(s)
-        if self.inentry and not self.insource:
+        if self.inentry and not self.insource and not self.inimage:
             if element == 'content':
                 self.entries[-1].setdefault(element, [])
                 contentparams = copy.deepcopy(self.contentparams)
