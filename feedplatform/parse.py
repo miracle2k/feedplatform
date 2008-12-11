@@ -13,6 +13,7 @@ from feedplatform import hooks
 from feedplatform.log import log
 from feedplatform.conf import config
 from feedplatform import db
+from feedplatform.util import asciify_url
 
 
 def simple_loop(callback=None, options={}):
@@ -72,7 +73,10 @@ def update_feed(feed, options={}):
 
     # ACTION: PARSE FEED
     log.info('Updating feed #%d: %s' % (feed.id, feed.url))
-    data_dict = feedparser.parse(feed.url, **parser_args)
+    # It may be worth noting that FeedParser already IDNA-encodes by
+    # itself, but expects the path/query etc. to already be quoted,
+    # or it'll screw up the url badly.
+    data_dict = feedparser.parse(asciify_url(feed.url), **parser_args)
 
     # HOOK: AFTER_PARSE
     stop = hooks.trigger('after_parse', args=[feed, data_dict])
