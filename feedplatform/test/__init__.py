@@ -507,12 +507,6 @@ class MockHTTPHandler(urllib2.BaseHandler):
         except KeyError, e:
             # KeyError is meant as a 404
             status, headers, content = 404, {}, ""
-        except Exception, e:
-            # Exception will be swallowed by the feedparser lib anyway,
-            # try to get some attention through a message (to stderr, or
-            # it will be captured by nose).
-            print >> sys.stderr, 'ERROR: Failed to render "%s": %s' % (url, e)
-            raise
         else:
             headers = MockHTTPMessage(headers)
 
