@@ -563,3 +563,15 @@ TODO:
     - ENFORCE_URI_SCHEME currently is not implemented. It should also not
       only work for feeds, but also for example when downloading images, so
       it is best implemented in ``util.urlopen()``.
+    - we should find a solution for the "Warning: Data truncated for column"
+      issue in mysql - if a limited-length VARCHAR field is used and a feed
+      contains a long title, for example, those are bound to appear at some
+      point. they are however raised directly by the MySQLdb storm lib, and
+      I'm not sure if there is a good way to instruct it to hide those. In
+      fact, we might not even want to - other warnings may be of interest.
+      possible we would require the user to define the max length of each
+      column, when applicable, in his model config. while this is already
+      very easy for fields in own's own addins, it's not generally possile
+      to override other addins.
+      we also might want to add functionality to add for example trailing
+      dots if the data needs to be truncated.
