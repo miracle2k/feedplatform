@@ -13,7 +13,7 @@ from feedplatform import hooks
 from feedplatform.log import log
 from feedplatform.conf import config
 from feedplatform import db
-from feedplatform.util import asciify_url
+from feedplatform.util import asciify_url, with_socket_timeout
 
 
 def simple_loop(callback=None, options={}):
@@ -199,3 +199,5 @@ def update_feed(feed, options={}):
 
     # commit once for each feed
     db.store.commit()
+
+update_feed = with_socket_timeout(update_feed)

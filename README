@@ -369,6 +369,13 @@ Custom handlers that will be passed to urllib2 when fetching feeds. This,
 among other things, allows you to add support for new protocols. Note that
 you then might need to update ENFORCE_URI_SCHEME as well.
 
+SOCKET_TIMEOUT
+~~~~~~~~~~~~~~
+
+Default: ``10``
+
+The timeout to use for connections, in floating seconds.
+
 
 Internals
 ---------

@@ -29,3 +29,6 @@ ENFORCE_URI_SCHEME = ('http', 'https',)
 # among other things, allows you to add support for new protocols.
 # Note that you then may have to update ENFORCE_URI_SCHEME as well.
 URLLIB2_HANDLERS = ()
+
+# The timeout to use for connections in floating seconds.
+SOCKET_TIMEOUT = 10

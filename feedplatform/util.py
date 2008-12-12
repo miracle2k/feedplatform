@@ -1,6 +1,7 @@
 ﻿"""Generally helpful stuff, to be used by library code and addins.
 """
 
+import socket
 import urllib, urllib2
 import urlparse
 import datetime
@@ -15,6 +16,7 @@ __all__ = (
     'to_unicode',
     'asciify_url',
     'urlopen', 'UrlOpenError',
+    'with_socket_timeout',
 )
 
 
@@ -215,6 +217,22 @@ def urlopen(url, *args, **kwargs):
             raise UrlOpenError("%s" % e)
     finally:
         opener.close()
+
+
+def with_socket_timeout(func):
+    """Decorator that makes sure that the wrapped function uses the socket
+    timeout specified in the settings.
+
+    Restores the original timeout value after the call.
+    """
+    def wrapper(*args, **kwargs):
+        old_timeout = socket.getdefaulttimeout()
+        socket.setdefaulttimeout(config.SOCKET_TIMEOUT)
+        try:
+            return func(*args, **kwargs)
+        finally:
+            socket.setdefaulttimeout(old_timeout)
+    return wrapper
 
 
 if __name__ == '__main__':
