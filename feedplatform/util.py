@@ -69,7 +69,9 @@ def asciify_url(url, force_quote=False):
 
     See also RFC 3987.
 
-    By default, tries to avoid double-quoting.
+    By default, tries to avoid double-quoting, i.e. if a part of the
+    domain is found to be already quoted, it will be left alone. This
+    behaviour can be changed by setting ``force_quote`` to ``True``.
 
     If ``url`` is found not to be a valid URI, the string is returned
     unchanged, allowing you to generically use this function in
@@ -136,7 +138,7 @@ def asciify_url(url, force_quote=False):
     >>> asciify_url(u'path?x=1#bcd')
     u'path?x=1#bcd'
     """
-    assert type(url) == unicode
+    assert isinstance(url, unicode)
 
     parts = urlparse.urlsplit(url)
     if not parts.scheme or not parts.netloc:
