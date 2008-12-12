@@ -202,9 +202,9 @@ def urlopen(url, *args, **kwargs):
     """
     opener = urllib2.build_opener(*config.URLLIB2_HANDLERS)
     try:
+        url = asciify_url(url)
         request = urllib2.Request(url, *args, **kwargs)
         request.add_header('User-Agent', config.USER_AGENT)
-        url = asciify_url(url)
         try:
             return opener.open(request)
         except Exception, e:
