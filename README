@@ -560,3 +560,6 @@ TODO:
       want to use FeedPlatform to sync for example a single feed, by letting
       you use a "static backend", where the feed urls could be given directly
       in Python.
+    - ENFORCE_URI_SCHEME currently is not implemented. It should also not
+      only work for feeds, but also for example when downloading images, so
+      it is best implemented in ``util.urlopen()``.
