@@ -1,5 +1,5 @@
-"""FeedParser has a bug due to which it returns enclosure data as
-bytestrings in certain cases, for example if the feed is bozo. We've
+"""FeedParser has a bug due to which it occasionally returns some data
+a bytestrings in certain cases, for example if the feed is bozo. We've
 patched this in our custom version, and here we test the scenario.
 """
 
@@ -10,15 +10,21 @@ from feedplatform.deps import feedparser
 
 def test_native():
     """Test the the problem with feedparser module directly."""
-    # bozo: item closing tag is missing
+    # bozo: final closing ">" chars are missing
+
     f = feedparser.parse(
-        '<rss><channel><item><enclosure href="http://h.com/p/f.mp3" length="10" /></channel></rss>')
+        '<rss><channel><item><enclosure href="http://h.com/p/f.mp3" length="10" /></item></channel></rss')
     assert type(f.entries[0].enclosures[0].href) == unicode
 
+    f = feedparser.parse(
+        '<rss><channel><itunes:image href="http://image.example.com/a.gif" /></channel></rss')
+    assert type(f.feed.image.href) == unicode
 
-def test_addins():
+
+def test_enclosure_addin():
     """Test the problem through and in the context of the enclosure
-    handling addins.
+    handling addins (enclosures are one of the problem areas with respect
+    to this bug.
     """
 
     ADDINS = [

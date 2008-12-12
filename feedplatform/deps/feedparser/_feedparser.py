@@ -779,12 +779,8 @@ class _FeedParserMixin:
         if is_htmlish and SANITIZE_HTML:
             if element in self.can_contain_dangerous_markup:
                 output = _sanitizeHTML(output, self.encoding, self.contentparams.get('type', 'text/html'))
-
-        if self.encoding and type(output) != type(u''):
-            try:
-                output = unicode(output, self.encoding)
-            except:
-                pass
+        
+        output = self._makeItUnicode(output)
 
         # address common error where people take data that is already
         # utf-8, presume that it is iso-8859-1, and re-encode it.
@@ -911,6 +907,14 @@ class _FeedParserMixin:
                 pass
             attrsD['href'] = href
         return attrsD
+        
+    def _makeItUnicode(self, something):
+        if self.encoding and type(something) != type(u''):
+            try:
+                return unicode(something, self.encoding)
+            except:
+                pass
+        return something
     
     def _save(self, key, value):
         context = self._getContext()
@@ -1392,7 +1396,7 @@ class _FeedParserMixin:
         if attrsD.has_key('href'):
             expectingText = 0
             if (attrsD.get('rel') == 'alternate') and (self.mapContentType(attrsD.get('type')) in self.html_types):
-                context['link'] = attrsD['href']
+                context['link'] = self._makeItUnicode(attrsD['href'])
         else:
             self.push('link', expectingText)
     _start_producturl = _start_link
@@ -1510,14 +1514,9 @@ class _FeedParserMixin:
     _end_itunes_summary = _end_summary
         
     def _start_enclosure(self, attrsD):
-        attrsD = self._itsAnHrefDamnIt(attrsD)        
+        attrsD = self._itsAnHrefDamnIt(attrsD)
         for key in attrsD.keys():
-			# copied from self.push()
-            if self.encoding and type(attrsD[key]) != type(u''):
-                try:
-                    attrsD[key] = unicode(attrsD[key], self.encoding)
-                except:
-                    pass
+            attrsD[key] = self._makeItUnicode(attrsD[key])
         context = self._getContext()
         attrsD['rel']='enclosure'
         context.setdefault('links', []).append(FeedParserDict(attrsD))
@@ -1563,7 +1562,7 @@ class _FeedParserMixin:
 
     def _start_itunes_image(self, attrsD):
         self.push('itunes_image', 0)
-        self._getContext()['image'] = FeedParserDict({'href': attrsD.get('href')})
+        self._getContext()['image'] = FeedParserDict({'href': self._makeItUnicode(attrsD.get('href'))})
     _start_itunes_link = _start_itunes_image
         
     def _end_itunes_block(self):
