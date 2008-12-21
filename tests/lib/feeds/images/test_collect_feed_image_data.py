@@ -46,7 +46,7 @@ def test_basic():
 
         def pass2(feed):
             # changed values are picked up
-            assert feed.image_title == None
+            assert feed.image_title == ''
             assert feed.image_href == 'http://example.org/new-cover.png'
             assert feed.image_extension == 'png'
             assert feed.image_filename == 'new-cover.png'
@@ -87,7 +87,7 @@ def test_failure_reset():
 
         def pass2(feed):
             # ...and the value is removed.
-            assert feed.image_href == None
+            assert feed.image_href == ''
 
     feedev.testcaller()
 

@@ -92,7 +92,9 @@ class _base_data_collector(addins.base):
                     source_name = "%s_parsed" % source_name
                     new_value = struct_to_datetime(source_dict.get(source_name))
                 else:
-                    new_value = source_dict.get(source_name)
+                    # Make sure to default to an empty string rather,
+                    # than NULL, since not all schemas may allow NULL.
+                    new_value = source_dict.get(source_name, u'')
 
             setattr(obj, target_name, new_value)
 

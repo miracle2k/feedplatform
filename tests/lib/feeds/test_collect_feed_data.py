@@ -13,10 +13,12 @@ class ValidFeed(feedev.Feed):
     content = """
         <rss xmlns:prism="http://prismstandard.org/namespaces/1.2/basic/">
         <channel>
+            {% <3 %}
             <title>
                 {% =1 %}org title{% end %}
                 {% =2 %}changed title{% end %}
             </title>
+            {% end %}
             <pubDate>
                 {% =1 %}Fri, 15 Aug 2008 23:01:39 +0200{% end %}
                 {% =2 %}Fri, 17 Aug 2008 23:01:39 +0200{% end %}
@@ -39,6 +41,16 @@ class ValidFeed(feedev.Feed):
         assert feed.title == 'changed title'
         assert feed.updated.day == 17
         assert feed.prism_issn == '0099-9999'
+
+    def pass3(feed):
+        # If a string field is missing completely, we store an empty
+        # string rather than a None/NULL value. This avoids problems
+        # with database schemas that do not allow NULL, and there is
+        # limited value in differentiating between a field not
+        # existing at all in a feed, and having an empty value.
+        # Of course, this could be made configurable.
+        assert feed.title == u''
+        assert not feed.title is None
 
 
 class BozoFeed(feedev.Feed):

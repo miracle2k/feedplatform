@@ -53,9 +53,10 @@ class ValidFeed(feedev.Feed):
         assert enclosure.length == None
 
     def pass4(feed):
-        # or, the attributes may be  missing completely
+        # or, the attributes may be missing completely; for string
+        # values, there is no difference between empty and missing.
         enclosure = feed.items.one().enclosures.one()
-        assert enclosure.type == None
+        assert enclosure.type == ''
         assert enclosure.length == None
 
     def pass5(feed):
