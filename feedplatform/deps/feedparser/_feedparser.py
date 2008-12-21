@@ -3393,7 +3393,7 @@ def parse(url_file_stream_or_string, etag=None, modified=None, agent=None, refer
     except Exception, e:
         result['bozo'] = 1
         result['bozo_exception'] = e
-        data = ''
+        data = None
         f = None
 
     # if feed is gzip-compressed, decompress it
@@ -3465,7 +3465,7 @@ def parse(url_file_stream_or_string, etag=None, modified=None, agent=None, refer
         return result
 
     # if there was a problem downloading, we're done
-    if not data:
+    if data is None:
         return result
 
     # determine character encoding

@@ -1,0 +1,37 @@
+Make sure an empty content feed (size/length 0) is flagged as bozo.
+
+From: melsdoerfer <michael@elsdoerfer.com>
+
+Due to a bug in Feed Parser, these cases previously just returned a totally empty result dict.
+
+While not strictly necessary to run FeedPlatform, it is recommended, in order to handle those rare cases were a server sends out an emtpy document.
+
+Reported as issue #149.
+---
+
+ feedparser/feedparser.py |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+
+diff --git a/feedparser/feedparser.py b/feedparser/feedparser.py
+index bfebd8e..0dd6ebd 100644
+--- a/feedparser/feedparser.py
++++ b/feedparser/feedparser.py
+@@ -3398,7 +3398,7 @@ def parse(url_file_stream_or_string, etag=None, modified=None, agent=None, refer
+     except Exception, e:
+         result['bozo'] = 1
+         result['bozo_exception'] = e
+-        data = ''
++        data = None
+         f = None
+ 
+     # if feed is gzip-compressed, decompress it
+@@ -3470,7 +3470,7 @@ def parse(url_file_stream_or_string, etag=None, modified=None, agent=None, refer
+         return result
+ 
+     # if there was a problem downloading, we're done
+-    if not data:
++    if data is None:
+         return result
+ 
+     # determine character encoding
