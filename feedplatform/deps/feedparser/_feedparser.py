@@ -1728,7 +1728,7 @@ class _BaseHTMLProcessor(sgmllib.SGMLParser):
                         value = unicode(value, self.encoding)
                     except:
                         value = unicode(value, 'iso-8859-1')
-                uattrs.append((unicode(key, self.encoding), value))
+                uattrs.append((unicode(key, self.encoding or 'iso-8859-1'), value))
             strattrs = u''.join([u' %s="%s"' % (key, value) for key, value in uattrs])
             if self.encoding:
                 try:
@@ -3563,7 +3563,7 @@ def parse(url_file_stream_or_string, etag=None, modified=None, agent=None, refer
             result['bozo_exception'] = feedparser.exc or e
             use_strict_parser = 0
     if not use_strict_parser:
-        feedparser = _LooseFeedParser(baseuri, baselang, known_encoding and 'utf-8' or '', entities)
+        feedparser = _LooseFeedParser(baseuri, baselang, known_encoding and 'utf-8' or 'iso-8859-1', entities)
         feedparser.feed(data)
     result['feed'] = feedparser.feeddata
     result['entries'] = feedparser.entries

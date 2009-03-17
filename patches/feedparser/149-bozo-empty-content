@@ -14,7 +14,7 @@ Reported as issue #149.
 
 
 diff --git a/feedparser/feedparser.py b/feedparser/feedparser.py
-index bfebd8e..58a9dcd 100644
+index 50202b2..fec6e0c 100644
 --- a/feedparser/feedparser.py
 +++ b/feedparser/feedparser.py
 @@ -3398,7 +3398,7 @@ def parse(url_file_stream_or_string, etag=None, modified=None, agent=None, refer

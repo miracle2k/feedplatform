@@ -4,4 +4,6 @@ Patches to Universal Feed Parser. The builtin version of
 Not all are strictly required. More information is included with each
 patch file.
 
-The patches are managed using Stacked Git.
+The patches are managed using Stacked Git. When updating the patches, use
+"stg export"  and make sure to copy all the patch files over: subsequent
+patches of the one you edited likely changed as well.

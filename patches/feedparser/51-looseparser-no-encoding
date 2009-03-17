@@ -1,0 +1,56 @@
+FeedParser's ``_LooseFeedParser`` class is (seemingly in pretty much all cases) instantiated with an empty string as the ```encoding`` value, which can lead to exceptions down the road when the encoding is actually used.
+
+From: melsdoerfer <michael@elsdoerfer.com>
+
+Ironically, the loose parser seems to be used primarily for cases where encoding problems (like not being able to find a valid, working encoding) make using the strict parser impossible in the first place.
+
+This is reported as issue #51, and includes a patch by blaker, on which our own patch is based. See this ticket for a whole bunch of additional information.
+
+While not strictly necessary to run FeedPlatform, you are encouraged to use the patch. Occurance of this bug is somewhat rare, but can easily happen.
+---
+
+ feedparser/feedparser.py                           |    4 ++--
+ .../rss/no_known_encoding_with_loose_parser.xml    |   10 ++++++++++
+ 2 files changed, 12 insertions(+), 2 deletions(-)
+ create mode 100644 feedparser/tests/illformed/rss/no_known_encoding_with_loose_parser.xml
+
+
+diff --git a/feedparser/feedparser.py b/feedparser/feedparser.py
+index bfebd8e..50202b2 100644
+--- a/feedparser/feedparser.py
++++ b/feedparser/feedparser.py
+@@ -1733,7 +1733,7 @@ class _BaseHTMLProcessor(sgmllib.SGMLParser):
+                         value = unicode(value, self.encoding)
+                     except:
+                         value = unicode(value, 'iso-8859-1')
+-                uattrs.append((unicode(key, self.encoding), value))
++                uattrs.append((unicode(key, self.encoding or 'iso-8859-1'), value))
+             strattrs = u''.join([u' %s="%s"' % (key, value) for key, value in uattrs])
+             if self.encoding:
+                 try:
+@@ -3567,7 +3567,7 @@ def parse(url_file_stream_or_string, etag=None, modified=None, agent=None, refer
+             result['bozo_exception'] = feedparser.exc or e
+             use_strict_parser = 0
+     if not use_strict_parser:
+-        feedparser = _LooseFeedParser(baseuri, baselang, known_encoding and 'utf-8' or '', entities)
++        feedparser = _LooseFeedParser(baseuri, baselang, known_encoding and 'utf-8' or 'iso-8859-1', entities)
+         feedparser.feed(data)
+     result['feed'] = feedparser.feeddata
+     result['entries'] = feedparser.entries
+diff --git a/feedparser/tests/illformed/rss/no_known_encoding_with_loose_parser.xml b/feedparser/tests/illformed/rss/no_known_encoding_with_loose_parser.xml
+new file mode 100644
+index 0000000..bbbb4c1
+--- /dev/null
++++ b/feedparser/tests/illformed/rss/no_known_encoding_with_loose_parser.xml
+@@ -0,0 +1,10 @@
++﻿<!--
++Description: _LooseFeedParser is used without a known encoding and unknown_starttag is called during parsing (this used to fail). The test tries to recreate the circumstances under which this happens. FeedParser tries a variety of encodings and because you can decode pretty much anthing as, say, windows-1252 without an exception, it will usually find one that works. *Unless* the file has a BOM, in which case the _toUTF8() always tries the BOM encoding rather then the one it is actually supposed to try (possibly another bug in itself). In other words, for this test to pass successfully it needs to have a UTF8 BOM. In case the _toUTF8() function ever changes we also assert that no encoding was determined.
++Expect:      bozo and not encoding
++-->
++<rss version="2.0">
++<channel>
++<title>Valid UTF8: ѨInvalid UTF8: Espa�a</title>
++<description><pre class='screen'></pre></description>
++</channel>
++</rss>
+\ No newline at end of file

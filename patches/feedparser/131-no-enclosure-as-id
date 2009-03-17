@@ -17,7 +17,7 @@ Reported as issue #131.
 
 
 diff --git a/feedparser/feedparser.py b/feedparser/feedparser.py
-index 58a9dcd..e7b7bae 100644
+index fec6e0c..eac1f8c 100644
 --- a/feedparser/feedparser.py
 +++ b/feedparser/feedparser.py
 @@ -1390,8 +1390,6 @@ class _FeedParserMixin:
