@@ -3451,8 +3451,9 @@ def parse(url_file_stream_or_string, etag=None, modified=None, agent=None, refer
             bozo_message = 'no Content-type specified'
         result['bozo'] = 1
         result['bozo_exception'] = NonXMLContentType(bozo_message)
-        
-    result['version'], data, entities = _stripDoctype(data)
+
+    if data is not None:
+        result['version'], data, entities = _stripDoctype(data)
 
     baseuri = http_headers.get('content-location', result.get('href'))
     baselang = http_headers.get('content-language', None)

@@ -9,12 +9,12 @@ While not strictly necessary to run FeedPlatform, it is recommended, in order to
 Reported as issue #149.
 ---
 
- feedparser/feedparser.py |    4 ++--
- 1 files changed, 2 insertions(+), 2 deletions(-)
+ feedparser/feedparser.py |    9 +++++----
+ 1 files changed, 5 insertions(+), 4 deletions(-)
 
 
 diff --git a/feedparser/feedparser.py b/feedparser/feedparser.py
-index bfebd8e..0dd6ebd 100644
+index bfebd8e..58a9dcd 100644
 --- a/feedparser/feedparser.py
 +++ b/feedparser/feedparser.py
 @@ -3398,7 +3398,7 @@ def parse(url_file_stream_or_string, etag=None, modified=None, agent=None, refer
@@ -26,7 +26,19 @@ index bfebd8e..0dd6ebd 100644
          f = None
  
      # if feed is gzip-compressed, decompress it
-@@ -3470,7 +3470,7 @@ def parse(url_file_stream_or_string, etag=None, modified=None, agent=None, refer
+@@ -3456,8 +3456,9 @@ def parse(url_file_stream_or_string, etag=None, modified=None, agent=None, refer
+             bozo_message = 'no Content-type specified'
+         result['bozo'] = 1
+         result['bozo_exception'] = NonXMLContentType(bozo_message)
+-        
+-    result['version'], data, entities = _stripDoctype(data)
++
++    if data is not None:
++        result['version'], data, entities = _stripDoctype(data)
+ 
+     baseuri = http_headers.get('content-location', result.get('href'))
+     baselang = http_headers.get('content-language', None)
+@@ -3470,7 +3471,7 @@ def parse(url_file_stream_or_string, etag=None, modified=None, agent=None, refer
          return result
  
      # if there was a problem downloading, we're done
