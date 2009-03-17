@@ -7,6 +7,27 @@ a valid image, by looking at the headers (or optionally by fully reading
 the image?
 
 # TODO: Support updating the image when the href changes.
+
+# TODO: There is an issue currently with the way the image extension is
+resolved. It stems from the fact that the image extension (as returned by
+``RemoteImage.extension`` may change as more data becomes available). For
+example, imaging this: ``store_feed_images`` downloads and stores the main
+image. At this point, the extension is read from the URL. Next,
+``feed_image_thumbnails`` downloads the full image and loads it into
+PIL - from now on, the PIL format will be used as the extension. Because the
+original image had an incorrect extension, the original feed image will have
+been saved with a different extension than the thumbnail. The same thing
+happens when a .jpg extension ends up as .jpeg, because that's what PIL calls
+the format (note that you may need to create at least two thumbnails to
+reproduce this, since the code determines the final thumbnail file path
+before downloading/loading into PIL).
+When ``collect_feed_image_data`` is used to store the mage extension for
+later reference, it only gets worse, because either the original or the
+thumbnails will use a different extension from what is stored.
+So, we probably have to do something about this. In the meantime, a user can
+use a custom addin that runs before any other image addins and which ensures
+that the image is loaded into PIL, therefore causing the final extension
+value to be available from the beginning.
 """
 
 import os
