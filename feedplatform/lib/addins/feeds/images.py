@@ -42,6 +42,7 @@ from feedplatform import addins
 from feedplatform import db
 from feedplatform import hooks
 from feedplatform import util
+from feedplatform.deps import thumbnail
 from collect_feed_data import _base_data_collector
 
 
@@ -740,7 +741,7 @@ class feed_image_thumbnails(store_feed_images):
                 'size': ("%dx%d" % size),
             })
             self._ensure_directories(path)
-            thumb = make_thumbnail(image.pil, size[0], size[1], 'extend')
+            thumb = thumbnail.extend(image.pil, size[0], size[1])
             thumb.save(path, format=self.format or image.pil.format)
 
 
@@ -792,67 +793,3 @@ class collect_feed_image_data(_base_data_collector):
 
     def on_feed_image_failed(self, feed, image_dict, image, exception):
         return self._process(feed, {}, None)
-
-
-def make_thumbnail(image, new_width, new_height, mode="crop"):
-    """Create a thumbnail of a PIL image.
-
-    Parameters:
-        * ``new_width``, ``new_height``:
-            Obviously, the wanted size of the image. Usually smaller
-            than the orginal, although both directions work.
-
-        * ``mode``:
-            Supports "crop", "extend" and "fit".
-                crop:       Keep propertions by cropping the image.
-                extend:     Keep propertions by extending the canvas.
-                fit:        Do not make an effort to keep proportions.
-
-    # TODO: mode "extend" does not support enlarging of images.
-
-    Partially based on code from this article:
-        http://batiste.dosimple.ch/blog/2007-05-13-1/
-    """
-
-    from PIL import Image
-
-    org_img = image
-
-    if mode == "crop":
-        org_width, org_height = org_img.size
-        crop_ratio = new_width / float(new_height)
-        image_ratio = org_width / float(org_height)
-        if crop_ratio < image_ratio:
-            # width needs to shrink
-            top = 0
-            bottom = org_width
-            crop_width = int(org_width * crop_ratio)
-            left = (org_width - crop_width) // 2
-            right = left + crop_width
-        else:
-            # height needs to shrink
-            left = 0
-            right = org_width
-            crop_height = int(org_width * crop_ratio)
-            top = (org_height - crop_height) // 2
-            bottom = top + crop_height
-        # actually resize the image
-        new_img = org_img.crop((left, top, right, bottom)).resize(
-            (new_width,new_height), Image.ANTIALIAS)
-
-    elif mode == "fit":
-        new_img = org_img.resize((new_width,new_height), Image.ANTIALIAS)
-
-    elif mode == 'extend':
-        # we can use the builtin function for parts of the job
-        thumb_img = org_img.copy()
-        thumb_img.thumbnail((new_width, new_height), Image.ANTIALIAS)
-        thumb_width, thumb_height = thumb_img.size
-        # extend canvas whith whitespace
-        new_img = Image.new("RGB", (new_width, new_height), "white")
-        new_img.paste(thumb_img, ((new_width-thumb_width)//2, (new_height-thumb_height)//2))
-
-    else:
-        raise Exception("'%s' is not a supported mode" % mode)
-
-    return new_img

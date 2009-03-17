@@ -63,10 +63,12 @@ Credits
 ~~~~~~~
 
 In addition to the dependencies above, the following 3rd party code is
-used, but integrated into the package:
+used, but integrated into the package (in the ``feedplatform.deps``
+package):
 
     * Universal Feed Parser (http://www.feedparser.org/)
     * daemon.py (http://www.clapper.org/software/python/daemon/)
+    * pyutils.thumbnail (http://elsdoerfer.name/=pyutils)
 
 
 Tutorial
