@@ -186,8 +186,9 @@ class RemoteImage(object):
         image format as detected by PIL.
 
         # TODO: Could possibly be improved so that a full image load
-        is not required using ``PIL.ImageFile.Parser``, see also
-        ``django.core.files.images.get_image_dimensions``.
+        is not required, using ``PIL.ImageFile.Parser``, see also
+        ``django.core.files.images.get_image_dimensions`` - having
+        the data available would suffice.
         """
         if self.pil:
             return unicode(self.pil.format.lower())
@@ -232,7 +233,7 @@ class RemoteImage(object):
 
         Called internally when access to the image data is needed. The
         fact that the data is yielded live means the caller may already
-        start using it, before the download is completed.
+        start using it before the download is complete.
         """
         # TODO: store bigger files on disk?
         self._data = StringIO.StringIO()
@@ -326,7 +327,7 @@ class RemoteImage(object):
                 self._pil = PILImage.open(self.data)
                 # A bunch of errors are only raised when PIL actually
                 # attempts to decode the image, which does not necessarily
-                # happend when you open it. Those include for example:
+                # happen when you open it. Those include for example:
                 #     - "cannot read interlaced PNG files"
                 #     - "* decoder not available"
                 # By forcing a load here we can catch them in one place,
@@ -342,7 +343,7 @@ class RemoteImage(object):
                 # other IOErrors that could occur that we don't want to
                 # hide, like permission problems when saving.
                 #
-                # TODO: Actually, it makes sense to do this: Unnecessarily
+                # TODO: Actually, it makes sense to do the above: Unnecessarily
                 # wasting resources due to loading the image when not
                 # required is something we should avoid. For now, we'd have
                 # to catch the IOError:
