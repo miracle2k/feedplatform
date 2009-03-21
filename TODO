@@ -1,0 +1,83 @@
+add one or more example projects
+
+
+possibly add automatic model creation to Django integration, e.g.
+
+    AbstractFeed, AbstractItem, AbstractEnclosure = feedplatform.django.generate_models()
+
+    class Feed(AbstractFeed):
+        pass
+
+or, automatically via a setting:
+
+    settings.FEEDPLATFORM_AUTOGENERATE_MODELS = TRUE
+    from feedplatform.integration.django import models
+    models.Feed
+
+explain and provide better tools to use custom model classes
+
+automatic schema creation (generate create table statements)
+
+let user configure if a feed failure should be logged as a warning
+or just an info (or an error?)
+
+allow addins to return multiple guids; helpful to migrate to another
+guid scheme; would even allow more flexible guid schemes, e.g. based
+on alternatively 'updated' or 'created' timestamps. by storing
+information about which one was used within the guid, if a feed used
+only 'created', but at some point adds 'updated' fields as well,
+items in the database that were added with 'created' would still be
+found and identified - and could be migrated to 'updated'.
+
+related to the above, we could provide a special "solid" mode (via
+a configuration option) that would always collect all possible guids
+from all addins, and use an existing item if any of them matches.
+then, even feeds that add guids at a later point will not have
+duplicates, although of course there is increased danger of false
+positives, as well as a performance cost.
+
+support dry-run functionality (see what would happen if a feed were
+to be updated, but do not write to database).
+
+management command to dump out a default config file
+
+addin to use python-dateutil for more robust date support
+
+addin to download favicons
+
+addin to prioritize parsing, so that feeds that update frequently are
+also checked more frequently.
+
+addin to respect the ttl given by the feed publisher
+
+data collectors should support a default set of data, so that
+``collect_item_data()`` is valid.
+
+explain in readme how certain hooks (like before_parse) can be used
+to complete episode-worker jobs (e.g. guess the language of all
+addins that have not been guessed yet). this is useful if an addin is
+only added at a later point in the lifecycle of a project, for example.
+builtin addins should support being used for this, where applicable.
+
+abstract the Storm backend away. not only would this allow alternative
+backends, like say, couchdb, it would also simplify cases where you'd
+want to use FeedPlatform to sync for example a single feed, by letting
+you use a "static backend", where the feed urls could be given directly
+in Python.
+
+ENFORCE_URI_SCHEME currently is not implemented. It should also not
+only work for feeds, but also for example when downloading images, so
+it is best implemented in ``util.urlopen()``.
+
+we should find a solution for the "Warning: Data truncated for column"
+issue in mysql - if a limited-length VARCHAR field is used and a feed
+contains a long title, for example, those are bound to appear at some
+point. they are however raised directly by the MySQLdb storm lib, and
+I'm not sure if there is a good way to instruct it to hide those. In
+fact, we might not even want to - other warnings may be of interest.
+possible we would require the user to define the max length of each
+column, when applicable, in his model config. while this is already
+very easy for fields in own's own addins, it's not generally possile
+to override other addins.
+we also might want to add functionality to add for example trailing
+dots if the data needs to be truncated.
