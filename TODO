@@ -39,16 +39,16 @@ positives, as well as a performance cost.
 support dry-run functionality (see what would happen if a feed were
 to be updated, but do not write to database).
 
-management command to dump out a default config file
+Management command to dump out a default config file.
 
-addin to use python-dateutil for more robust date support
+Addin to use python-dateutil for more robust date support.
 
-addin to download favicons
+Addin to download favicons.
 
-addin to prioritize parsing, so that feeds that update frequently are
+Addin to prioritize parsing, so that feeds that update frequently are
 also checked more frequently.
 
-addin to respect the ttl given by the feed publisher
+Addin to respect the ttl given by the feed publisher.
 
 data collectors should support a default set of data, so that
 ``collect_item_data()`` is valid.
@@ -76,3 +76,28 @@ as it may sound, since we'd also need to give the user a  way to define
 those max length values for fields. While this is easy for custom 
 extensions' own fields, the user would need to be able to  overwrite 
 fields defined in code he doesn't control as well.
+
+Right now, when using the thumbnail addin, it is hard to add new sizes
+after the addin was already in use. Even reparsing all scripts will
+often be not good enough, what with 304 reponses and image update 
+restrictions. Even if both of those are solved via run options, requiring 
+a full reparse is still a major inconvience. A better solution would be
+to provide a ThumbnailManager addin which, when enabled, would add a 
+management command to regenerate the thumbnails. To be able to do this, 
+the manager would need access to both the store_thumbnail addin as well
+as the store_image addin, which would save the original image. This could
+be done by wrapping around:
+
+    ADDINS = [
+        ...
+        thumbnail_manager(
+            original=store_feed_images(..),
+            thumbs=feed_image_thumbnails(...)
+        )
+        ...
+    ]
+    
+This manager would then expose both addins (there could be a generic 
+implementation/base class for wrapper addins of this kind), while at the 
+same time having knowledge of how to store the thumbnails and where to find
+the original image.
