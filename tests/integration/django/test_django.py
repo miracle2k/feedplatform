@@ -26,7 +26,7 @@ def test_django_integration():
     # 1. get via process
     managepy = os.path.join(os.path.dirname(__file__), 'proj', 'manage.py')
     process = subprocess.Popen([managepy, 'feedplatform', 'models'],
-                               stdout=subprocess.PIPE, shell=True,
+                               stdout=subprocess.PIPE,
                                universal_newlines=True)
     stdout, stderr = process.communicate()
     process_output = stdout
