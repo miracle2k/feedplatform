@@ -97,16 +97,21 @@ def get_command(name):
         raise UnknownCommandError("Unknown command: %r" % name, name)
 
 
-def call_command(name, *args, **options):
+def call_command(command, *args, **options):
     """Manually runs a command. This is the primary API you should
     use for calling specific commands from your own code.
+
+    ``command`` may be a string specifiying the command name, or
+    a ``BaseCommand`` instance.
 
     Examples:
         call_command('tables')
         call_command('start', '--daemonize')
         call_command('stop')
     """
-    return get_command(name).execute(*args, **options)
+    if not isinstance(command, BaseCommand):
+        command = get_command(command)
+    return command.execute(*args, **options)
 
 
 class LaxOptionParser(OptionParser):
@@ -225,13 +230,14 @@ class BaseCommand(object):
     def run_from_argv(self, argv):
         parser = self.create_parser(os.path.basename(argv[0]), argv[1])
         options, args = parser.parse_args(argv[2:])
-        self.execute(*args, **options.__dict__)
+        return self.execute(*args, **options.__dict__)
 
     def execute(self, *args, **options):
         try:
             output = self.handle(*args, **options)
             if output:
                 print output
+            return 0
         except CommandError, e:
             sys.stderr.write(str('Error: %s\n' % e))
             return 1
