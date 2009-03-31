@@ -16,6 +16,9 @@ from feedplatform import db
 from feedplatform.util import asciify_url, with_socket_timeout
 
 
+__all__ = ('simple_loop', 'update_feed',)
+
+
 def simple_loop(callback=None, options={}):
     """Loop forever, and update feeds.
 
