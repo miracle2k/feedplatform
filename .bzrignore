@@ -4,5 +4,6 @@ dist
 .DS_Store
 .project
 .pydevproject
+.settings
 examples/python/img
 BRANCH_TODO
