@@ -252,6 +252,10 @@ handler is called (assuming no other plugins before us already provide
 a guid), we simply return a randomly generated identifer (obviously,
 this addin isn't all that useful).
 
+Addins can define database fields, hooks and management commands by
+defining ``get_fields()``, ``get_hooks()`` and ``get_commands()``,
+respectively.
+
 ``addins.base`` also provides a python logging object in ``self.log``.
 
 Looking at the available addins in ``feedplatform.lib`` should give you

@@ -5,6 +5,12 @@ Inspired by Django's ``core.management`` module.
 
 import sys, os
 from optparse import OptionParser, make_option
+from feedplatform.addins import get_addins
+
+
+__all__ = ('CommandError', 'UnknownCommandError',
+           'reload_commands', 'get_command', 'call_command',
+           'BaseCommand', 'NoArgsCommand',)
 
 
 class CommandError(Exception):
@@ -22,27 +28,48 @@ class UnknownCommandError(Exception):
         self.name = name
 
 
-_commands = None
+_COMMANDS = None
+
+
+def reload_commands():
+    global _COMMANDS;
+    _COMMANDS = None
+
+
 def get_commands():
     """Returns a dictionary mapping all available command names to
-    their module name (in which they are defined).
+    either a Command class, or the module name in which the command
+    class is defined.
 
-    For now, this simply looks at the python files defined inside
-    ``feedplatform/management/commands``.
+    Commands can be defined:
+
+        - in ``feedplatform/management/commands``, each file
+          representing an individual command.
+
+        - by addins.
 
     The list is loaded once, and then cached.
     """
-    global _commands
-    if _commands is None:
+    global _COMMANDS
+    if _COMMANDS is None:
+        _COMMANDS = {}
+        # load from filesystem
         try:
             command_dir = os.path.join(__path__[0], 'commands')
-            _commands = dict([(file[:-3], 'feedplatform.management.commands')
-                              for file in os.listdir(command_dir)
-                              if not file.startswith('_')
-                                 and file.endswith('.py')])
+            _COMMANDS.update(
+                dict([(file[:-3], 'feedplatform.management.commands')
+                      for file in os.listdir(command_dir)
+                        if not file.startswith('_')
+                           and file.endswith('.py')]))
         except OSError:
-            _commands = {}
-    return _commands
+            pass
+
+        # load from addins
+        for addin in get_addins():
+            if hasattr(addin, 'get_commands'):
+                _COMMANDS.update(addin.get_commands());
+
+    return _COMMANDS
 
 
 def get_command(name):
@@ -51,17 +78,20 @@ def get_command(name):
     The command module is loaded and the command instantiated, and
     will be reused if accessed again.
     """
-    global _commands
+    global _COMMANDS
     try:
         module_name = get_commands()[name]
         if isinstance(module_name, BaseCommand):
             # if the command is already loaded, use it directly
             return module_name
+        if isinstance(module_name, type) and issubclass(module_name, BaseCommand):
+            # probably comes from an addin
+            return module_name()
         else:
             module = __import__('%s.%s' % (module_name, name),
                                 {}, {}, ['Command'])
             cmd = getattr(module, 'Command')()
-            _commands[name] = cmd  # use directly next time
+            _COMMANDS[name] = cmd  # use directly next time
             return cmd
     except KeyError:
         raise UnknownCommandError("Unknown command: %r" % name, name)

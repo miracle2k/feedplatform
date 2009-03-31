@@ -1,5 +1,7 @@
 from feedplatform import addins
+from feedplatform import management
 from nose.tools import assert_raises
+
 
 def test_log():
     """Make sure we can access and use self.log from
@@ -122,3 +124,21 @@ def test_dependency_order():
     # anyway, and we wanted to keep things simple.
     assert clslist_for(b,a) == [b,a]
     assert clslist_for(c,a) == [b,c,a]
+
+
+def test_commands():
+    """Addins may provide commands."""
+
+    class FooCommand(management.NoArgsCommand):
+        def handle_noargs(self, **options):
+            return 1
+
+    class foo(addins.base):
+        def get_commands(self):
+            return {
+                'foo': FooCommand,
+            }
+
+    addins.reinstall((foo,))
+
+    management.call_command('foo')
