@@ -190,15 +190,6 @@ def reinstall(addins=None):
 
     global _ADDINS
     _ADDINS = to_be_setup
-
-    # depends on the global being already updated
-    from feedplatform import management
-    management.reload_commands()
-    # TODO: why do we not reconfigure the database here? The README
-    # claims that the .db module is the parent and is supposed to
-    # configure .addins, but it doesn't, and I'm no longer sure why
-    # it would do so.
-
     return to_be_setup
 
 

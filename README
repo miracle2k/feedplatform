@@ -397,7 +397,7 @@ Currently, the package module dependencies look something like this:
         ↓                  ↑
     (P) .db →→→→→→→→→→→→→→ ↑
         ↑                  ↓
-        ↑           (P) .addins
+        ↑           (P) .addins ←←←←←← (P) .management
         ↑                 ↑↓
     (A) .parse →→→→→→→→ .hooks
 
@@ -440,7 +440,17 @@ Within the dependency tree, a module may only update it's children, i.e. the
 modules it depends upon, not the modules that depend on it. For example,
 ``db``, when reconfigured, may also reconfigure ``addins``, however, not the
 other way around. No clear rules as to which modules propagate updates to
-what other modules was a common source for subtle errors in the past.
+what other modules was a common source for subtle errors in the past. For
+example, say ``.db`` is initially configured and as part of that process it
+tries to use the list of addins to determine fields etc., possibly causing
+the  as-of-yet uninitialized ``.addins`` module to begin setting itself up.
+When now `addins`` tries to reconfigure ``.db`` while ``.db`` is still in
+it's own setup process, bad thigns happen.
+
+# TODO: We could potentially work around this by using "DURING
+CONFIGUARTION" locks. However, at some point we want to move from the
+current global state to a instance-local approach anyway, making the point
+moot.
 
 The relationship between ``.hooks`` and ``.addins`` is a special case, that
 unfortunately also sort of breaks the previous principle. While on a

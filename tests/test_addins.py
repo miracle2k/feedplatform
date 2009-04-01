@@ -140,5 +140,6 @@ def test_commands():
             }
 
     addins.reinstall((foo,))
+    management.reload_commands()
 
     management.call_command('foo')
