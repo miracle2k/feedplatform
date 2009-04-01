@@ -143,3 +143,18 @@ def test_commands():
     management.reload_commands()
 
     management.call_command('foo')
+
+
+def test_abstract():
+    """Test ability of addins to be abstract."""
+
+    class a(addins.base):
+        pass
+    class b(a):
+        abstract = True
+    class c(b):
+        pass
+
+    addins.reinstall((a,))
+    assert_raises(TypeError, addins.reinstall, (b,))
+    addins.reinstall((c,))

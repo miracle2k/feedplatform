@@ -47,7 +47,25 @@ class base(object):
           refer to a valid hook.
 
         * self.log provides a namespaced Python logging facility.
+
+        * A ``abstract`` attribute allows addins to be marked as not
+          directly usable.
     """
+
+    class __metaclass__(type):
+        def __new__(cls, name, bases, attrs):
+            # reset the ``abstract`` property for every new class
+            # automatically, i.e. does not inherit.
+            if not 'abstract' in attrs:
+                attrs['abstract'] = False
+            return type.__new__(cls, name, bases, attrs)
+
+
+    def __new__(cls, *args, **kwargs):
+        if getattr(cls, 'abstract', False):
+            raise TypeError('%s is an abstract addin.' % cls)
+        return super(base, cls).__new__(cls, *args, **kwargs)
+
 
     def setup(self):
         """Called to have the addin register it's hook callbacks.
