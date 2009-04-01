@@ -20,45 +20,46 @@ def setup_module():
 
 def test_django_integration():
     """Check that the output of a manual "call_command" matches what
-    we get from executing ./manage.py.
+    we get from executing through a Django project.
     """
 
-    # 1. get via process
-    managepy = os.path.join(os.path.dirname(__file__), 'proj', 'manage.py')
-    process = subprocess.Popen([managepy, 'feedplatform', 'models'],
-                               stdout=subprocess.PIPE,
-                               shell=os.name == 'nt' and True or False,
-                               universal_newlines=True)
-    stdout, stderr = process.communicate()
-    process_output = stdout
-
-    # 2. get via callcommand
-    oldconfig = conf.config._target
-    try:
-        conf.config.reset()
-        sys.path.append(os.path.join(os.path.dirname(__file__), 'proj'))
+    def _capture_with_fake_syspath(path, call, *args, **kwargs):
+        sys.path.append(path)
         try:
-            os.environ['FEEDPLATFORM_CONFIG'] = 'feedplatform_config'
             real_stdout = sys.stdout
             sys.stdout = StringIO()
             try:
-                call_command('models')
+                call(*args, **kwargs)
                 sys.stdout.seek(0)
-                command_output = sys.stdout.read()
+                return sys.stdout.read()
             finally:
-                # set back to real stdout
                 sys.stdout = real_stdout
         finally:
-            # remove test django project from path
             sys.path.pop()
+
+    # 1. get through Django
+    os.environ['DJANGO_SETTINGS_MODULE'] = 'proj.settings'
+    from django.core.management import call_command as dj_call_command
+    django_output = _capture_with_fake_syspath(
+                          os.path.join(os.path.dirname(__file__)),
+                          dj_call_command, 'feedplatform', 'models')
+
+    # 2. get via own callcommand
+    oldconfig = conf.config._target
+    try:
+        conf.config.reset()
+        os.environ['FEEDPLATFORM_CONFIG'] = 'feedplatform_config'
+        local_output = _capture_with_fake_syspath(
+                            os.path.join(os.path.dirname(__file__), 'proj'),
+                            call_command, 'models')
     finally:
         # reset to previously used config
         conf.config._target = oldconfig
 
     # 3. check that the two are the same
-    print "command: (%s)" % repr(command_output), len(command_output)
-    print "process: (%s)" % repr(process_output), len(process_output)
-    assert process_output ==  command_output
+    print "command: (%s)" % repr(django_output), len(django_output)
+    print "process: (%s)" % repr(local_output), len(local_output)
+    assert django_output == local_output
 
 
 def test_make_dsn():
