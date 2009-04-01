@@ -41,6 +41,8 @@ class _base_data_collector(addins.base):
         'href': {'target': 'image_href', 'field': (Unicode, (), {})}
     """
 
+    abstract = True
+
     USE_DEFAULT = object()
 
     # provide in subclass
