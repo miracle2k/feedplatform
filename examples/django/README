@@ -5,5 +5,10 @@ View/Template-wise, there isn't all that much to see, but try:
 
     $ ./manage.py feedplatform
 
-for controlling feedplatform, and see ``feeds.settings`` for
-how the integration was setup.
+for controlling feedplatform, and see ``aggregator.settings.py`` 
+for how the integration was set up.
+
+Note that we're not using the standard Django project/app-style
+directory layout simply to avoid issues with our parent folder
+being named "django". Instead, the "aggregator" directory is
+both app and project and holds the settings file.
