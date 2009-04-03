@@ -1,5 +1,6 @@
 import os
 import logging
+import threading
 from optparse import make_option
 from feedplatform import parse
 from feedplatform import log
@@ -114,9 +115,14 @@ class StartDaemonCommand(BaseCommand):
 
         try:
             # TODO: parse the rest of the args, pass along as args/options
-            daemon_to_start.run()
+            # TODO: does it make sense to make the daemon addin subclasses
+            # of Thread?
+            thread = threading.Thread(target=daemon_to_start.run)
+            thread.start()
+            while thread.isAlive():
+                thread.join(0.5)
         except KeyboardInterrupt:
-            pass
+            daemon_to_start.stop()
 
 
 class provide_daemons(addins.base):
@@ -137,7 +143,9 @@ class base_daemon(addins.base):
 
     ``run()`` is called when the daemon is supposed to execute. In the
     same way as commands, the method is passed positional arguments (as
-    ``args``) and command line options (``options``).
+    ``args``) and command line options (``options``). If you write a
+    subclass, make sure that your ``run`` method checks ``stop_requested``
+    in regular intervals, and exits when asked to.
 
     While not strictly necessary, it is strongly recommended that you name
     your daemons (``name`` argument to ``__init__``). If you have more than
@@ -150,9 +158,13 @@ class base_daemon(addins.base):
 
     def __init__(self, name=None):
         self.name = name
+        self.stop_requested = False
 
     def run(self, *args, **options):
         raise NotImplementedError()
+
+    def stop(self):
+        self.stop_requested = True
 
 
 class provide_loop_daemon(base_daemon):
@@ -193,9 +205,9 @@ class provide_loop_daemon(base_daemon):
                 feed = feeds[i]
                 counter += 1
                 parse.update_feed(feed)
-                if do_return():
+                if do_return() or self.stop_requested:
                     return
-            if do_return():
+            if do_return() or self.stop_requested:
                 return
             if self.once:
                 return
