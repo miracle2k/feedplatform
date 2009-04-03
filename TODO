@@ -46,7 +46,7 @@ Addin to use python-dateutil for more robust date support.
 Addin to download favicons.
 
 Addin to prioritize parsing, so that feeds that update frequently are
-also checked more frequently.
+also checked more frequently (provide_prioritized_daemon).
 
 Addin to respect the ttl given by the feed publisher.
 
@@ -69,21 +69,21 @@ ENFORCE_URI_SCHEME currently is not implemented. It should also not
 only work for feeds, but also for example when downloading images, so
 it is best implemented in ``util.urlopen()``.
 
-Provide facilities that would add trailing dots to strings such as 
+Provide facilities that would add trailing dots to strings such as
 title, desription etc. when they exceed a defined max length and would
 be cut off (MySQL for example throughs warnings). This isn't as easy
-as it may sound, since we'd also need to give the user a  way to define 
-those max length values for fields. While this is easy for custom 
-extensions' own fields, the user would need to be able to  overwrite 
+as it may sound, since we'd also need to give the user a  way to define
+those max length values for fields. While this is easy for custom
+extensions' own fields, the user would need to be able to  overwrite
 fields defined in code he doesn't control as well.
 
 Right now, when using the thumbnail addin, it is hard to add new sizes
 after the addin was already in use. Even reparsing all scripts will
-often be not good enough, what with 304 reponses and image update 
-restrictions. Even if both of those are solved via run options, requiring 
+often be not good enough, what with 304 reponses and image update
+restrictions. Even if both of those are solved via run options, requiring
 a full reparse is still a major inconvience. A better solution would be
-to provide a ThumbnailManager addin which, when enabled, would add a 
-management command to regenerate the thumbnails. To be able to do this, 
+to provide a ThumbnailManager addin which, when enabled, would add a
+management command to regenerate the thumbnails. To be able to do this,
 the manager would need access to both the store_thumbnail addin as well
 as the store_image addin, which would save the original image. This could
 be done by wrapping around:
@@ -96,8 +96,16 @@ be done by wrapping around:
         )
         ...
     ]
-    
-This manager would then expose both addins (there could be a generic 
-implementation/base class for wrapper addins of this kind), while at the 
-same time having knowledge of how to store the thumbnails and where to find
-the original image.
+
+This manager would then expose both addins (there could be a generic
+implementation/base class for wrapper addins of this kind), while at the
+same time having knowledge of how to store the thumbnails and where to
+find the original image.
+
+Support urllib2-like default addins. For example, right now at least one
+daemon needs to be manually installed to have a "start" command available.
+It would potentially be more user friendly to make "provide_loop_daemon"
+available by default, if no other daemon is installed. If the user no
+manually installs "xyz_daemon", the default daemon will not be available
+unless explicitely set up as well, i.e. the default addin would only exist
+as long as no other addin of the same type (base class) is added.
