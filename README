@@ -1,4 +1,4 @@
-﻿FeedPlatform
+FeedPlatform
 ============
 
 FeedPlatform implements the core functionality of a feed aggregator. It is
@@ -176,7 +176,35 @@ Run the ``models`` command again:
         id: Int
 
 
-# TODO: Explain running the daemon
+# TODO: Explain running the daemon (the start command, the daemon addins..)
+
+Overview/Concepts
+-----------------
+
+# TODO: info about:
+	global config file; addins provide essentially everything,
+	are using hooks; system management commands, addins can add
+	custom commands. error handling, guid handling;
+
+
+Daemons and control commands
+============================
+
+So far, we talked about how addins determine how an individual feed is
+parsed, and how the data model looks that maps the feeds. However, at
+some point the user needs an interface to actually tell FeedPlatform to
+do something. You can of course work directly with the library through
+code, and are free to do whatever you like. However, some commonly used
+functionality is already included, and a framework is provided that
+allows you to integrate your custom requirements in a well-structured
+manner.
+
+The framework supports:
+
+	- Daemons, which usually run forever, keeping feeds up-to-date.
+	- One-time commands, i.e. to update an individual feed.
+
+# TODO: explain about using multiple daemons, named and unnamed daemons...
 
 
 Available addins
@@ -210,6 +238,7 @@ see the docstrings in the source code of each for more information.
     * guid_by_link
     * guid_by_date
     * save_bandwith
+    * provide_loop_daemon
 
 
 Your own addins
@@ -260,6 +289,8 @@ respectively.
 
 Looking at the available addins in ``feedplatform.lib`` should give you
 some idea of how various things could be approached.
+
+# TODO: explain how to write custom daemons
 
 
 Integration with Django
