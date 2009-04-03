@@ -16,32 +16,7 @@ from feedplatform import db
 from feedplatform.util import asciify_url, with_socket_timeout
 
 
-__all__ = ('simple_loop', 'update_feed',)
-
-
-def simple_loop(callback=None, options={}):
-    """Loop forever, and update feeds.
-
-    Callback will be run every time a feed was updated, and is
-    expected to take one argument, the number of iterations so far.
-    If it returns True, the loop will stop.
-    """
-    #feed = db.store.get_next_feed()
-    #while feed:
-    #    update_feed(feed)
-    #    feed = db.store.get_next_feed()
-    do_return = lambda: callback and callback(counter)
-    counter = 0
-    while True:
-        feeds = db.store.find(db.models.Feed)
-        for i in xrange(0, feeds.count()):  # XXX: only do this in sqlite
-            feed = feeds[i]
-            counter += 1
-            update_feed(feed)
-            if do_return():
-                return
-        if do_return():
-            return
+__all__ = ('update_feed',)
 
 
 def update_feed(feed, options={}):
