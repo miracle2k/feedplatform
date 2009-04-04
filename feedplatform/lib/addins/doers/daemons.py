@@ -368,6 +368,10 @@ class provide_multi_daemon(base_daemon):
         )
         ...]
 
+    Note: Be very careful which daemons you mix here. Many parts of
+    FeedPlatform, most importantly the database module, are currently
+    not thread-safe!
+
     # TODO: an alternative implementation could override start() isAlive()
     join() etc. and instead of acting like a thread itself, would merely
     fake one. isALive/join() would return once all threads return False.
