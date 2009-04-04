@@ -1,7 +1,10 @@
 import os
 import logging
 import threading
+import SocketServer, select
 from optparse import make_option
+import Queue
+from itertools import chain
 from feedplatform import parse
 from feedplatform import log
 from feedplatform.deps import daemon
@@ -10,7 +13,9 @@ from feedplatform import addins
 from feedplatform import db
 
 
-__all__ = ('base_daemon', 'provide_daemons', 'provide_loop_daemon',)
+__all__ = ('base_daemon', 'provide_daemons', 'provide_loop_daemon',
+           'provide_queue_daemon', 'provide_socket_queue_controller',
+           'provide_multi_daemon',)
 
 
 class StartDaemonCommand(BaseCommand):
@@ -63,6 +68,7 @@ class StartDaemonCommand(BaseCommand):
 
 
         # determine which daemons are available, and which one to run
+        # TODO: better handle duplicate names
         named_daemons = {}
         unnamed_daemons = []
         for addin in addins.get_addins():
@@ -181,10 +187,10 @@ class provide_loop_daemon(base_daemon):
     far. If it returns ``True``, the loop will stop.
     """
 
-    def __init__(self, once=False, callback=None):
+    def __init__(self, once=False, callback=None, *args, **kwargs):
         self.once = once
         self.callback = callback
-        super(provide_loop_daemon, self).__init__()
+        super(provide_loop_daemon, self).__init__(*args, **kwargs)
 
     def run(self, *args, **options):
         """Loop forever, and update feeds.
@@ -214,3 +220,178 @@ class provide_loop_daemon(base_daemon):
                 return
             if self.once:
                 return
+
+
+class provide_queue_daemon(base_daemon):
+    """Parses the feeds that are in the given queue. If the queue is
+    empty, it waits until new feeds are added.
+
+    Python's ``Queue`` module is used (``queue`` in Python 3).
+
+    This addin is commonly used to support "ping"-like services.
+
+    Example:
+
+        queue = collections.deque()
+        [...
+         provide_queue_daemon(queue),
+        ...]
+
+    # TODO: add option to work as a LIFO stack.
+
+    TODO: Support a mgmt command to add stuff to a queue (and possibly
+    other actions, like query, pop). This should probably be implemented
+    as another addin, and needs to support multiple queues.
+    """
+
+    def __init__(self, queue, *args, **kwargs):
+        super(provide_queue_daemon, self).__init__(*args, **kwargs)
+        self.queue = queue
+
+    def run(self):
+        while not self.stop_requested:
+            try:
+                # Since Queue itself just uses an infinite loop,
+                # we don't have to bother with using a large timeout
+                # and can instead check stop_requested more often.
+                feed = self.queue.get(timeout=0.1)
+                try:
+                    # we need to be careful here, there's really no guarantee
+                    # that the feed still exists.
+                    parse.update_feed(feed)
+                except:
+                    # TODO: do not catch all exceptions
+                    # TODO: log an error
+                    pass
+            except Queue.Empty:
+                pass
+
+
+class provide_socket_queue_controller(base_daemon):
+    """Provides a socket (TCP or UNIX local) which can be used to put
+    feeds on a queue, as processed by ``provide_queue_daemon``.
+
+    ``socket`` must be either a filename, or 2-tuple of (hostname, port).
+
+    If your queue ``queue_timeout``
+
+    The protocol spoken is pretty simple: The daemon expects each queue
+    put request on a separate line, and each line may either consist
+    of the feed's id or an url. In the latter case the url column should
+    be unique - if multiple feeds currently match such a request, the
+    daemon will respond with a 500 error.
+    The response is a status line in HTTP format ("CODE MSG"), with CODE
+    being one of the following:
+
+        200    ok, feed was added to queue
+        304    the feed is already in the queue, nothing was done
+        404    the given feed does not exist in the database
+        500    something unexpected went wrong
+        507    queue is full (if limited)
+
+    The encoding used is utf8.
+    """
+
+    class SocketControllerHandler(SocketServer.StreamRequestHandler):
+        def handle(self):
+            result = '200 Ok'
+            try:
+                rstr = self.rfile.readline().strip()
+                if rstr.isdigit():
+                    feed = db.store.get(db.models.Feed, int(rstr))
+                else:
+                    feed = db.get_one(db.store.find(
+                        db.models.Feed, db.models.Feed.url == \
+                            unicode(rstr, 'utf8')))
+
+                if not feed:
+                    result = '404 Feed not found'
+                else:
+                    # We're accessing queue's internal ``deque`` object
+                    # here, in order to be able to use "in". Since we're
+                    # locking with the mutex, we should be perfectly safe
+                    # (it might not even be necessary).
+                    self.server.queue.mutex.acquire()
+                    try:
+                        exists = feed in self.server.queue.queue
+                    finally:
+                        self.server.queue.mutex.release()
+                    if not exists:
+                        try:
+                            self.server.queue.put(feed,
+                                self.server.queue_timeout)
+                        except Queue.Full:
+                            result = '507 Queue is full'
+                    else:
+                        result = '304 Feed already in queue'
+            except Exception, e:
+                result = '500 %s' % e
+            self.wfile.write("%s\n"%result)
+
+    def __init__(self, queue, socket, timeout=None, *args, **kwargs):
+        super(provide_socket_queue_controller, self).__init__(*args, **kwargs)
+        self.queue = queue
+        self.socket = socket
+        self.queue_timeout = timeout
+
+    def run(self, *args, **options):
+        server_class = isinstance(self.socket, basestring) and \
+            SocketServer.ThreadingUnixStreamServer or \
+            SocketServer.ThreadingTCPServer
+        server = server_class(self.socket,
+            provide_socket_queue_controller.SocketControllerHandler)
+        server.queue = self.queue
+        server.queue_timeout = self.queue_timeout
+        while not self.stop_requested:
+            r,w,e = select.select([server.socket], [], [], 0.5)
+            if r:
+                server.handle_request()
+
+
+class provide_multi_daemon(base_daemon):
+    """Virtual daemon that can consolidate a number of other daemons,
+    and run them under the same label.
+
+    Any number of daemons can be passed. If a single daemon is designated
+    the "main daemon", it will be passed along the given arguments.
+    Otherwise, no arguments are supported.
+
+    For example, the following is a common use case that installs
+    a queue daemon, and a controller daemon that allows putting stuff
+    on that queue from the outside:
+
+        [...
+        provide_multi_daemon(
+            provide_queue_daemon(...),
+            [provide_socket_queue_controller(...)],
+            name='queue'
+        )
+        ...]
+
+    # TODO: an alternative implementation could override start() isAlive()
+    join() etc. and instead of acting like a thread itself, would merely
+    fake one. isALive/join() would return once all threads return False.
+    """
+
+    def __init__(self, main_daemon=None, daemons=[],
+                 *args, **kwargs):
+        assert main_daemon or daemons
+        super(provide_multi_daemon, self).__init__(*args, **kwargs)
+        self.main_daemon = main_daemon
+        self.other_daemons = daemons
+
+    @property
+    def all_daemons(self):
+        return [d for d in chain([self.main_daemon], self.other_daemons) if d]
+
+    def run(self, *args, **options):
+        for d in self.all_daemons:
+            d.start()
+        while any([d.isAlive() for d in self.all_daemons]) and \
+              not self.stop_requested:
+            pass
+        for d in self.all_daemons:
+            d.stop()
+        while any([d.isAlive() for d in self.all_daemons]):
+            # wait until they all stopped
+            pass

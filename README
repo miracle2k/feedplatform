@@ -239,6 +239,9 @@ see the docstrings in the source code of each for more information.
     * guid_by_date
     * save_bandwith
     * provide_loop_daemon
+    * provide_queue_daemon
+    * provide_socket_queue_controller
+    * provide_multi_daemon
 
 
 Your own addins
