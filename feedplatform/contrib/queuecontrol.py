@@ -50,7 +50,7 @@ def send_to_queue(address, feed_id_or_url):
         try:
             s.connect(address)
         except socket.error, msg:
-            raise PingSystemError('Unable to connect to bot, try again later')
+            raise QueueSystemError('Unable to connect to bot, try again later')
         else:
             s.send("%s\n" % feed_id_or_url)
             response = s.recv(1024)
@@ -58,13 +58,13 @@ def send_to_queue(address, feed_id_or_url):
             try:
                 code = int(code)
             except ValueError:
-                raise PingSystemError('Invalid response code from bot: %s' % code)
+                raise QueueSystemError('Invalid response code from bot: %s' % code)
             if 200 <= code < 400:
                 return
             elif code == 404:
-                error = PingUserError('The requested feed was not found')
+                error = QueueUserError('The requested feed was not found')
             elif code >= 500:
-                error = PingSystemError('Bot was unable to handle the request: %s' % msg)
+                error = QueueSystemError('Bot was unable to handle the request: %s' % msg)
             error.code = code
             raise error
     finally:
