@@ -12,7 +12,7 @@ from feedplatform import addins
 from feedplatform import db
 from feedplatform import hooks
 from feedplatform.lib.addins.feeds.collect_feed_data \
-    import _base_data_collector
+    import base_data_collector
 
 
 __all__ = (
@@ -154,7 +154,7 @@ class store_enclosures(addins.base):
                 args=[feed, enclosure, enclosure_dict, enclosure_created])
 
 
-class collect_enclosure_data(_base_data_collector):
+class collect_enclosure_data(base_data_collector):
     """Collect enclosure-level meta data, and store it in the database.
 
     This works precisely like ``collect_feed_data``, except that

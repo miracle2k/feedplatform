@@ -20,12 +20,13 @@ from feedplatform.util import struct_to_datetime
 
 
 __all__ = (
+    'base_data_collector',
     'collect_feed_data',
 )
 
 
-class _base_data_collector(addins.base):
-    """Baseclass for both item and feed-level data collector addins.
+class base_data_collector(addins.base):
+    """Baseclass for data collector addins.
 
     Subclasses should provide at least the ``model_name`` and
     ``standard_fields`` attributes, and may implement ``_get_value``
@@ -110,7 +111,7 @@ class _base_data_collector(addins.base):
         return self.USE_DEFAULT
 
 
-class collect_feed_data(_base_data_collector):
+class collect_feed_data(base_data_collector):
     """Collect feed-level meta data (as in: not item-specific), and
     store it in the database.
 

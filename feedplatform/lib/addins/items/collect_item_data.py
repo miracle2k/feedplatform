@@ -4,7 +4,7 @@
 from storm.locals import Unicode, DateTime
 
 from feedplatform.lib.addins.feeds.collect_feed_data \
-    import _base_data_collector
+    import base_data_collector
 
 
 __all__ = (
@@ -12,7 +12,7 @@ __all__ = (
 )
 
 
-class collect_item_data(_base_data_collector):
+class collect_item_data(base_data_collector):
     """Collect item-level meta data, and store it in the database.
 
     This works precisely like ``collect_feed_data``, except that

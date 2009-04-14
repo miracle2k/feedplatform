@@ -1,4 +1,4 @@
-"""``_base_data_collector`` is the base class for the ``collect_*_data``
+"""``base_data_collector`` is the base class for the ``collect_*_data``
 addins.
 
 Most of it's funtionality is already ensured to be working by the tests
@@ -11,7 +11,7 @@ from storm.locals import Unicode
 from feedplatform import test
 from feedplatform import db
 from feedplatform.lib.addins.feeds.collect_feed_data \
-    import _base_data_collector
+    import base_data_collector
 
 
 def test_custom_fieldname():
@@ -23,7 +23,7 @@ def test_custom_fieldname():
     added to the generated models.
     """
 
-    class my_collector(_base_data_collector):
+    class my_collector(base_data_collector):
         model_name = 'feed'
         standard_fields = {
             'title': {'target': 'my_title_field', 'field': (Unicode, (), {})}

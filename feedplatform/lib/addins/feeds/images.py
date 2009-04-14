@@ -43,7 +43,7 @@ from feedplatform import db
 from feedplatform import hooks
 from feedplatform import util
 from feedplatform.deps import thumbnail
-from collect_feed_data import _base_data_collector
+from collect_feed_data import base_data_collector
 
 
 __all__ = (
@@ -745,7 +745,7 @@ class feed_image_thumbnails(store_feed_images):
             thumb.save(path, format=self.format or image.pil.format)
 
 
-class collect_feed_image_data(_base_data_collector):
+class collect_feed_image_data(base_data_collector):
     """Collect feed image data and store it in the feed model.
 
     This works precisely like the other collectors (e.g.
