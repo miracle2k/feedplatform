@@ -4,8 +4,9 @@ from feedplatform.lib import collect_feed_data
 
 
 ADDINS = [
-    # one unicode one datetime field, one custom
-    collect_feed_data('title', 'updated', prism_issn=(Unicode, (), {}))
+    # one unicode field, one datetime field with custom name,
+    # one full custom field
+    collect_feed_data('title', updated='last_updated', prism_issn=(Unicode, (), {}))
 ]
 
 
@@ -33,13 +34,13 @@ class ValidFeed(feedev.Feed):
     def pass1(feed):
         # initial values are picked up
         assert feed.title == 'org title'
-        assert feed.updated.day == 15
+        assert feed.last_updated.day == 15
         assert feed.prism_issn == '0066-6666'
 
     def pass2(feed):
         # changed values are picked up
         assert feed.title == 'changed title'
-        assert feed.updated.day == 17
+        assert feed.last_updated.day == 17
         assert feed.prism_issn == '0099-9999'
 
     def pass3(feed):

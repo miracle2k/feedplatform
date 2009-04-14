@@ -40,6 +40,11 @@ class base_data_collector(addins.base):
     specifiy a dict for ``field``:
 
         'href': {'target': 'image_href', 'field': (Unicode, (), {})}
+
+    See also ``collect_feed_data`` and other subclasses for information
+    about how these collectors can be called and used from the end-user
+    perspective - much of that functionality is implemented here in the
+    base class.
     """
 
     abstract = True
@@ -52,21 +57,28 @@ class base_data_collector(addins.base):
     date_fields = None
 
     def __init__(self, *args, **kwargs):
+        error_msg = 'unknown standard field "%s"'
         self.fields = {}
         for name in args:
             try:
                 f = self.standard_fields[name]
             except KeyError:
-                raise ValueError('unknown standard field "%s"' % name)
+                raise ValueError(error_msg % name)
             self.fields[name] = f
 
-        # only do this now so that defaults from *args are
-        # overwritten by kwargs; even though the situation
-        # makes hardly sense, this is the best way to resolve
-        # it, short of maybe raising an exception.
-        self.fields.update(kwargs)
+        for key, value in kwargs.items():
+            if isinstance(value, basestring):
+                # handle std fields being stored using a different name
+                f = self.standard_fields.get(key)
+                if not f:
+                    raise ValueError(error_msg % name)
+                self.fields[key] = {'target': value, 'field': f}
+            else:
+                self.fields[key] = value
 
-        # fields may be specified as dicts or tuples: normalize
+        # Fields may be specified as dicts or tuples: normalize
+        # everything to use the dict format, so we can work with a
+        # common datastructure from now on.
         for name, value in self.fields.iteritems():
             if not isinstance(value, dict):
                 self.fields[name] = {'field': value, 'target': name}
@@ -133,6 +145,14 @@ class collect_feed_data(base_data_collector):
 
         from storm.locals import Unicode
         collect_feed_data('title', prism_issn=(Unicode, (), {}))
+
+    You can also assign different columns to store the predefined default
+    field in:
+
+        collect_feed_data('title', updated='last_updated')
+
+    Now, the standard field ``title`` is handled normally, while
+    ``updated`` values will be saved to a column named ``last_updated``.
 
     If you're using custom fields, familiarize yourself with the
     Feedparser normalization rules:
