@@ -129,9 +129,8 @@ class StartDaemonCommand(BaseCommand):
             # we can always disable it. It's there for convenience's sake,
             # but our daemons/threads have a stop-flag mechanism that should
             # work just fine as well.
-            daemon_to_start.setDaemon(True)
             # TODO: parse the rest of the args, pass along as args/options
-            daemon_to_start.start()
+            daemon_to_start.start(daemon=True)
             while daemon_to_start.isAlive():
                 # join with a timeout, so KeyboardInterrupts get through
                 daemon_to_start.join(DEFAULT_LOOP_SLEEP)
@@ -170,10 +169,24 @@ class base_daemon(addins.base, threading.Thread):
     abstract = True
     depends = (provide_daemons,)
 
+    # If your daemon cannot be daemonic because it needs to do cleanup
+    # work, then set this to False. It will make sure your thread is
+    # never run in daemonic  mode, regardless of any possible global
+    # setting. You really need to make sure then that you handle the
+    # ``stop_requested` flag correctly and react in a timely manner.`
+    can_be_daemon_thread = True
+
     def __init__(self, name=None):
         super(base_daemon, self).__init__()
         self.name = name
         self.stop_requested = False
+
+    def start(self, daemon=False, *args, **kwargs):
+        # TODO: is there a way to have daemon threads complete shutdown
+        # jobs? If yes, we could get rid of this whole "can_be_daemon"
+        # mechanism.
+        self.setDaemon(daemon and self.can_be_daemon_thread)
+        super(base_daemon, self).start(*args, **kwargs)
 
     def run(self, *args, **options):
         raise NotImplementedError()
@@ -300,6 +313,8 @@ class provide_socket_queue_controller(base_daemon):
     The encoding used is utf8.
     """
 
+    can_be_daemon_thread = False
+
     class SocketControllerHandler(SocketServer.StreamRequestHandler):
         def handle(self):
             result = '200 Ok'
@@ -343,17 +358,25 @@ class provide_socket_queue_controller(base_daemon):
         self.queue_timeout = timeout
 
     def run(self, *args, **options):
-        server_class = isinstance(self.socket, basestring) and \
-            SocketServer.ThreadingUnixStreamServer or \
-            SocketServer.ThreadingTCPServer
+        if isinstance(self.socket, basestring):
+            server_class = SocketServer.ThreadingUnixStreamServer
+            is_local_socket = True
+        else:
+            server_class = SocketServer.ThreadingTCPServer
+            is_local_socket = False
         server = server_class(self.socket,
             provide_socket_queue_controller.SocketControllerHandler)
-        server.queue = self.queue
-        server.queue_timeout = self.queue_timeout
-        while not self.stop_requested:
-            r,w,e = select.select([server.socket], [], [], 0.5)
-            if r:
-                server.handle_request()
+        try:
+            server.queue = self.queue
+            server.queue_timeout = self.queue_timeout
+            while not self.stop_requested:
+                r,w,e = select.select([server.socket], [], [], 0.5)
+                if r:
+                    server.handle_request()
+        finally:
+            # cleanup
+            if is_local_socket:
+                os.unlink(self.socket)
 
 
 class provide_multi_daemon(base_daemon):
@@ -403,12 +426,11 @@ class provide_multi_daemon(base_daemon):
 
     def run(self, *args, **options):
         for d in self.all_daemons:
-            # Run child as daemon if we ourselfs are in daemon mode.
+            # Run child as daemon if we ourselves are in daemon mode.
             # This basically ensures that whenever we change our mind
             # about running in daemon mode, the change will be passed
             # down to use here.
-            d.setDaemon(self.isDaemon())
-            d.start()
+            d.start(daemon=self.isDaemon())
         while not self.stop_requested:
             for d in self.all_daemons:
                 # TODO: Using join() here seems to be actually more
@@ -422,9 +444,8 @@ class provide_multi_daemon(base_daemon):
         for d in self.all_daemons:
             d.stop()
         while any([d.isAlive() for d in self.all_daemons]):
+             # wait until all childs stopped
              # TODO: shutdown should hopefully happen fast, is a sleep
              # necessary here or does it actually hurt by adding more
              # delay?
             time.sleep(DEFAULT_LOOP_SLEEP)
-            # wait until they all stopped
-            pass
