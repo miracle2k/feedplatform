@@ -409,9 +409,16 @@ class provide_multi_daemon(base_daemon):
             # down to use here.
             d.setDaemon(self.isDaemon())
             d.start()
-        while any([d.isAlive() for d in self.all_daemons]) and \
-                                            not self.stop_requested:
-            time.sleep(DEFAULT_LOOP_SLEEP)
+        while not self.stop_requested:
+            for d in self.all_daemons:
+                # TODO: Using join() here seems to be actually more
+                # resource heavy than checking isAlive of every thread
+                # manually, and having a time.sleep() call (+0.2% CPU
+                # on my MacMini 2nd Gen. The same is probably true for
+                # the join() call in ``StartDaemonCommand``. Maybe we
+                # should revert the change that introduced this (see
+                # changeset 239).
+                d.join(DEFAULT_LOOP_SLEEP)
         for d in self.all_daemons:
             d.stop()
         while any([d.isAlive() for d in self.all_daemons]):
