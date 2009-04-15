@@ -63,10 +63,13 @@ class BozoFeed(feedev.Feed):
     """
 
     def pass1(feed):
-        # because the feed is bozo (author tag not closed), no data is
-        # being stored right now to avoid keeping invalid data. this
-        # behaviour might change at some point.
-        assert not feed.title
+        # Even if the feed is bozo (author tag not closed), the data
+        # is still being stored. there might be slight chance that in
+        # some rare cases, this will cause invalid data to be read,
+        # but our error handling tries to work around that, and besides,
+        # feeds are bozo so often (encoding incorrectly declared, for
+        # example), that we really don't want to exclude them.
+        assert feed.title == 'the-title'
 
 
 def test():

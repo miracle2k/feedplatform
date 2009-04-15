@@ -6,6 +6,7 @@ for those other addins, but we want to specifically test some scenarios
 here that are relevant for people writing custom addins based on it.
 """
 
+import datetime
 from storm.locals import Unicode
 
 from feedplatform import test
@@ -35,5 +36,31 @@ def test_custom_fieldname():
         def pass1(feed):
             assert hasattr(feed, 'my_title_field')
             assert hasattr(db.models.Feed, 'my_title_field')
+
+    test.testcaller()
+
+
+def test_special_fields():
+    """Test the special fields that every subclass will be able to provide.
+    """
+
+    class my_collector(base_data_collector):
+        model_name = 'feed'
+        standard_fields = {}
+        def on_after_parse(self, feed, data_dict):
+            return self._process(feed, data_dict.feed)
+
+    ADDINS = [my_collector(__now='last_processed')]
+
+    class BozoFeed(test.Feed):
+        # make sure the content here is not a valid feed, we want to make
+        # sure that this works even when feed the is bozo.
+        content = """<bozo>"""
+
+        def pass1(feed):
+            assert hasattr(feed, 'last_processed')
+            assert hasattr(db.models.Feed, 'last_processed')
+            # field should now have a value not too far from right now
+            assert abs(feed.last_processed - datetime.datetime.utcnow()).seconds < 10
 
     test.testcaller()

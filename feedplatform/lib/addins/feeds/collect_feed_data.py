@@ -12,6 +12,7 @@ set (e.g. "fullparse"). This is useful for:
 if the new value is not empty.
 """
 
+from datetime import datetime
 from storm.locals import Unicode, DateTime
 
 from feedplatform import addins
@@ -56,6 +57,16 @@ class base_data_collector(addins.base):
     standard_fields = None
     date_fields = None
 
+    # Provide special fields that every subclass supports.
+    class __metaclass__(type(addins.base)):
+        def __new__(cls, name, bases, attrs):
+            result = type(addins.base).__new__(cls, name, bases, attrs)
+            if result.standard_fields is not None:
+                standard_fields = result.standard_fields
+                result.standard_fields = {'__now': (DateTime, (), {})}
+                result.standard_fields.update(standard_fields)
+            return result
+
     def __init__(self, *args, **kwargs):
         error_msg = 'unknown standard field "%s"'
         self.fields = {}
@@ -71,7 +82,7 @@ class base_data_collector(addins.base):
                 # handle std fields being stored using a different name
                 f = self.standard_fields.get(key)
                 if not f:
-                    raise ValueError(error_msg % name)
+                    raise ValueError(error_msg % key)
                 self.fields[key] = {'target': value, 'field': f}
             else:
                 self.fields[key] = value
@@ -120,6 +131,9 @@ class base_data_collector(addins.base):
         Should return the final value, or ``self.USE_DEFAULT`` to let
         default processing continue.
         """
+        # handle base "special" fields
+        if source_name == '__now':
+            return datetime.utcnow()
         return self.USE_DEFAULT
 
 
@@ -135,6 +149,10 @@ class collect_feed_data(base_data_collector):
 
     Known fields currently include title, subtitle, summary, link,
     language, updated, modified.
+
+    Additionally, the following "special" feeds are supported:
+
+        __now        - the UTC timestamp of the moment of processing
 
     Using custom fields, you can read any field you want, but you
     need to specify a datatype for the database field.
@@ -172,5 +190,4 @@ class collect_feed_data(base_data_collector):
     date_fields = ('published', 'updated',)
 
     def on_after_parse(self, feed, data_dict):
-        if not data_dict.bozo:
-            return self._process(feed, data_dict.feed)
+        return self._process(feed, data_dict.feed)
