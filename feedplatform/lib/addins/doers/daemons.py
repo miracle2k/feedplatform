@@ -1,6 +1,7 @@
 import os
 import logging
 import threading
+import time
 import SocketServer, select
 from optparse import make_option
 import Queue
@@ -16,6 +17,10 @@ from feedplatform import db
 __all__ = ('base_daemon', 'provide_daemons', 'provide_loop_daemon',
            'provide_queue_daemon', 'provide_socket_queue_controller',
            'provide_multi_daemon',)
+
+
+# Used in various loops to safe CPU cycles.
+DEFAULT_LOOP_SLEEP = 0.1
 
 
 class StartDaemonCommand(BaseCommand):
@@ -128,7 +133,8 @@ class StartDaemonCommand(BaseCommand):
             # TODO: parse the rest of the args, pass along as args/options
             daemon_to_start.start()
             while daemon_to_start.isAlive():
-                daemon_to_start.join(0.5)
+                # join with a timeout, so KeyboardInterrupts get through
+                daemon_to_start.join(DEFAULT_LOOP_SLEEP)
         except KeyboardInterrupt:
             daemon_to_start.stop()
 
@@ -251,20 +257,22 @@ class provide_queue_daemon(base_daemon):
     def run(self):
         while not self.stop_requested:
             try:
-                # Since Queue itself just uses an infinite loop,
-                # we don't have to bother with using a large timeout
-                # and can instead check stop_requested more often.
+                # Since Queue itself just uses an infinite loop to
+                # implement it's blocking feature, we sort of don't
+                # need to bother specifying a timeout. We'd rather
+                # use the opportunity to check ``stop_requested``
+                # more often.
                 feed = self.queue.get(timeout=0.1)
                 try:
-                    # we need to be careful here, there's really no guarantee
-                    # that the feed still exists.
+                    # We need to be careful here, there's really no
+                    # guarantee that the feed still exists.
                     parse.update_feed(feed)
                 except:
                     # TODO: do not catch all exceptions
                     # TODO: log an error
                     pass
             except Queue.Empty:
-                pass
+                time.sleep(DEFAULT_LOOP_SLEEP)
 
 
 class provide_socket_queue_controller(base_daemon):
@@ -375,6 +383,11 @@ class provide_multi_daemon(base_daemon):
     # TODO: an alternative implementation could override start() isAlive()
     join() etc. and instead of acting like a thread itself, would merely
     fake one. isALive/join() would return once all threads return False.
+
+    # TODO: add an option to stop all threads as soon as one ends. this
+    is helpful if there is an error in one thread, since often it makes
+    no sense to continue running one daemon if it's dependencies are not
+    available.
     """
 
     def __init__(self, main_daemon=None, daemons=[],
@@ -390,12 +403,21 @@ class provide_multi_daemon(base_daemon):
 
     def run(self, *args, **options):
         for d in self.all_daemons:
+            # Run child as daemon if we ourselfs are in daemon mode.
+            # This basically ensures that whenever we change our mind
+            # about running in daemon mode, the change will be passed
+            # down to use here.
+            d.setDaemon(self.isDaemon())
             d.start()
         while any([d.isAlive() for d in self.all_daemons]) and \
-              not self.stop_requested:
-            pass
+                                            not self.stop_requested:
+            time.sleep(DEFAULT_LOOP_SLEEP)
         for d in self.all_daemons:
             d.stop()
         while any([d.isAlive() for d in self.all_daemons]):
+             # TODO: shutdown should hopefully happen fast, is a sleep
+             # necessary here or does it actually hurt by adding more
+             # delay?
+            time.sleep(DEFAULT_LOOP_SLEEP)
             # wait until they all stopped
             pass
