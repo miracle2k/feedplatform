@@ -109,3 +109,8 @@ available by default, if no other daemon is installed. If the user no
 manually installs "xyz_daemon", the default daemon will not be available
 unless explicitely set up as well, i.e. the default addin would only exist
 as long as no other addin of the same type (base class) is added.
+
+A global data collector would be a nice addition. Right now, the most
+top-level is "collect_feed_data", what we could add another one that
+works on FeedParser's top-level dict, i.e. the one that includes "version",
+"status", "namespaces" etc.
