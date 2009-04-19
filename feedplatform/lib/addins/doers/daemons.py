@@ -88,7 +88,7 @@ class StartDaemonCommand(BaseCommand):
         if len(named_daemons) + len(unnamed_daemons) == 1:
             # If only one daemon is available, we can start it pretty
             # much right away.
-            if named_daemons and named_daemons.keys()[0] == args[0]:
+            if named_daemons and args and named_daemons.keys()[0] == args[0]:
                 # If the user specified the only existing daemon by
                 # name, we make sure that name is not passed along
                 # as a subargument to the daemon itself.
