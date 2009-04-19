@@ -4,4 +4,5 @@
 107-keep-relative-guids
 51-looseparser-no-encoding
 149-bozo-empty-content
+164-expose-raw-content
 131-no-enclosure-as-id

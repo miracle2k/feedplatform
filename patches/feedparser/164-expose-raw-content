@@ -1,0 +1,44 @@
+Expose the raw feed content as an item ('data') in the result dict. This is for example useful for implementing features where you need access to data that is not parsed (e.g. comments), say for example claimcode-like functionality.
+
+From: melsdoerfer <michael@elsdoerfer.com>
+
+Not necessary to run FeedPlatform itself, but custom addins may find this feature useful.
+
+Reported as issue #164.
+---
+
+ feedparser/feedparser.py     |    2 +-
+ feedparser/feedparsertest.py |    6 +-----
+ 2 files changed, 2 insertions(+), 6 deletions(-)
+
+
+diff --git a/feedparser/feedparser.py b/feedparser/feedparser.py
+index fec6e0c..ba53113 100644
+--- a/feedparser/feedparser.py
++++ b/feedparser/feedparser.py
+@@ -3394,7 +3394,7 @@ def parse(url_file_stream_or_string, etag=None, modified=None, agent=None, refer
+         handlers = [handlers]
+     try:
+         f = _open_resource(url_file_stream_or_string, etag, modified, agent, referrer, handlers)
+-        data = f.read()
++        data = result['data'] = f.read()
+     except Exception, e:
+         result['bozo'] = 1
+         result['bozo_exception'] = e
+diff --git a/feedparser/feedparsertest.py b/feedparser/feedparsertest.py
+index d3606bb..1a93ecf 100644
+--- a/feedparser/feedparsertest.py
++++ b/feedparser/feedparsertest.py
+@@ -98,11 +98,7 @@ class FeedParserTestServer(Thread):
+ class TestCase(unittest.TestCase):
+   def failUnlessEval(self, evalString, env, msg=None):
+     """Fail unless eval(evalString, env)"""
+-    failure=(msg or 'not eval(%s)' % evalString)
+-    try:
+-      env = env.data
+-    except:
+-      pass
++    failure=(msg or 'not eval(%s)' % evalString)    
+     if not eval(evalString, env):
+       raise self.failureException, failure
+   
