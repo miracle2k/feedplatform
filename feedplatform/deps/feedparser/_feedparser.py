@@ -3389,7 +3389,7 @@ def parse(url_file_stream_or_string, etag=None, modified=None, agent=None, refer
         handlers = [handlers]
     try:
         f = _open_resource(url_file_stream_or_string, etag, modified, agent, referrer, handlers)
-        data = f.read()
+        data = result['data'] = f.read()
     except Exception, e:
         result['bozo'] = 1
         result['bozo_exception'] = e
