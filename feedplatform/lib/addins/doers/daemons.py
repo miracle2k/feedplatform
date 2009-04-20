@@ -280,10 +280,9 @@ class provide_queue_daemon(base_daemon):
                     # We need to be careful here, there's really no
                     # guarantee that the feed still exists.
                     parse.update_feed(feed)
-                except:
+                except Exception, e:
                     # TODO: do not catch all exceptions
-                    # TODO: log an error
-                    pass
+                    self.log.error('Error handling queued feed: %s' % e)
             except Queue.Empty:
                 time.sleep(DEFAULT_LOOP_SLEEP)
 
