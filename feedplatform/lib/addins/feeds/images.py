@@ -591,8 +591,8 @@ class feed_image_restrict_frequency(addins.base):
         if feed.image_updated:
             if datetime.datetime.utcnow() - feed.image_updated < delta:
                 # stop further processing
-                self.log.debug('Feed #%d: image was last updated'
-                        'recently enough' % (feed.id))
+                self.log.debug('Feed #%d: image was last updated '
+                               'recently enough' % (feed.id))
                 return True
 
     def on_feed_image_updated(self, feed, image_dict, image):
