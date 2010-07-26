@@ -1,0 +1,14 @@
+*.pyc
+/.DS_Store
+
+/MANIFEST
+/dist
+
+/.project
+/.pydevproject
+/.settings
+
+/examples/python/img
+/examples/python/test.db
+
+/BRANCH_TODO
